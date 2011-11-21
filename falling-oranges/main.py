@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 import time
@@ -10,15 +9,18 @@ import pygame
 from pygame.locals import *
 from pygame.color import THECOLORS
 from pygame.gfxdraw import box
+import random
 
 TARGET_FPS = 60
 
 MOVE_PLANE_EVENT = pygame.USEREVENT + 1
 MOVE_ORANGE_EVENT = pygame.USEREVENT + 2
+MOVE_PIG_EVENT = pygame.USEREVENT + 3
+random.seed()
 
 def main():
 	oranges = []
-	plane_speed = 1
+	plane_speed = pig_speed = 1
 	WINSIZE = 1024,768
 	pygame.init()	
 	clock = pygame.time.Clock()
@@ -27,6 +29,12 @@ def main():
 
 	plane_surface = pygame.image.load('plane.xpm')
 	orange_surface = pygame.image.load('orange.xpm')
+	pig_surface = pig_left_surface = pygame.image.load('pig.xpm')
+	pig_right_surface = pygame.transform.flip(pig_left_surface, True, False)
+	pig_surfaces = (pig_left_surface, pig_right_surface)
+	pig_move_direction = random.randint(0, 1)
+	pig_x = random.randint(0, screen.get_height()-pig_surface.get_height())
+	pig_rect = pygame.rect.Rect(pig_x, screen.get_height()-pig_surface.get_height(), pig_surface.get_width(), pig_surface.get_height())
 	plane_x = 0
 	plane_rect = pygame.rect.Rect(plane_x, 0, plane_surface.get_width(), plane_surface.get_height())
 
@@ -37,6 +45,7 @@ def main():
 
 	pygame.time.set_timer(MOVE_PLANE_EVENT, 10)
 	pygame.time.set_timer(MOVE_ORANGE_EVENT, 10)
+	pygame.time.set_timer(MOVE_PIG_EVENT, 10)
 	
 	while not done:
 		          
@@ -63,9 +72,24 @@ def main():
 			elif e.type == MOVE_ORANGE_EVENT:
 				for orange in oranges:
 					orange[1] += 1
+			elif e.type == MOVE_PIG_EVENT:
+				if random.randint(0, 255) == 0:# Randomly swap direction
+					pig_move_direction ^= 1
+				if pig_move_direction == 1:
+					pig_rect.move_ip(pig_speed, 0)
+				else:
+					pig_rect.move_ip(-pig_speed, 0)
+				if pig_rect.left <= 0:
+					pig_rect.left = 0
+					pig_move_direction ^= 1
+				elif pig_rect.left >= screen.get_width() - pig_surface.get_width():
+					pig_move_direction ^= 1
+					pig_rect.left = screen.get_width() - pig_surface.get_width() - 1
+															
 		# Draw
 		screen.fill(THECOLORS["black"])
 		screen.blit(plane_surface, plane_rect)
+		screen.blit(pig_surfaces[pig_move_direction], pig_rect)
 		falling_oranges = []
 		for i in range(0, len(oranges)):
 			orange = oranges[i]
