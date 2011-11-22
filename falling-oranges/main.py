@@ -22,12 +22,17 @@ random.seed()
 def main():
 	oranges = []
 	plane_speed = pig_speed = 1
+	orange_speed = 2
 	WINSIZE = 1024,768
 	pygame.init()	
+	pygame.mixer.init()
 	clock = pygame.time.Clock()
 	screen = pygame.display.set_mode(WINSIZE,0,8)
 	pygame.display.set_caption('Orange Drop!')
 
+	pig_ronc = pygame.mixer.Sound("pig_ronc.ogg")
+	last_ronc_time = 0
+	
 	plane_surface = pygame.image.load('plane.xpm')
 	orange_surface = pygame.image.load('orange.xpm')
 	pig_surface = pig_left_surface = pygame.image.load('pig.xpm')
@@ -64,15 +69,20 @@ def main():
 				if e.key == K_f:
 							pygame.display.toggle_fullscreen()
 				elif e.type == MOUSEBUTTONDOWN:
-					# drop ball
 					pass
 			elif e.type == MOVE_PLANE_EVENT:
 				plane_rect.move_ip(plane_speed, 0)				
 				if plane_rect.left >= screen.get_width() - plane_surface.get_width():
 					plane_rect.left = 0								
 			elif e.type == MOVE_ORANGE_EVENT:
+				current_time = time.time()
 				for orange in oranges:
-					orange[1] += 1
+					orange[1] += orange_speed
+					if current_time - last_ronc_time > 5: # Wait 5 s before roncs
+						rect = pygame.rect.Rect(orange[0], orange[1], plane_surface.get_width(), plane_surface.get_height())
+						if pig_rect.colliderect(rect):
+							pig_ronc.play()
+							last_ronc_time = current_time
 			elif e.type == MOVE_PIG_EVENT:
 				if random.randint(0, 255) == 0:# Randomly swap direction
 					pig_move_direction ^= 1
@@ -86,6 +96,7 @@ def main():
 				elif pig_rect.left >= screen.get_width() - pig_surface.get_width():
 					pig_move_direction ^= 1
 					pig_rect.left = screen.get_width() - pig_surface.get_width() - 1
+
 															
 		# Draw
 		screen.fill(THECOLORS["black"])
