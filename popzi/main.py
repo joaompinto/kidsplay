@@ -14,42 +14,64 @@ from pygame.gfxdraw import box, filled_circle
 import random 
 from random import randint
 
-TARGET_FPS = 60
-class PlayBoard:
-	def __init__(self, columns, rows):
-		self.rows = rows
-		self.columns = columns
+# The target frames per second is used to "sleep" the main loop between
+# screen redraws
+TARGET_FPS = 30
 
-		self.board = [x[:] for x in [[0]*rows]*columns]
+class PlayBoard:
+	def __init__(self, columns, rows):		
+		self.rows = rows
+		self.columns = columns		
+		# Create two dimentional array using list comprehension
+		self.board = [x[:] for x in [[0]*rows]*columns]		
+		# List of selected pieces
 		self.selected = []
 		
 	def ramdom_rows(self, nr_rows, rand_max):
 		""" Assign random values to the specified nr of bottom rows """
-		#print self.board
+
 		for c in range(self.columns):			
 			for r in range(nr_rows):			
 				bubble_id = randint(1, rand_max)
 				self.board[self.columns-c-1][self.rows-r-1] = bubble_id
-		print self.board
-		
-	def select(self, x, y, match_id=None):		
-		if match_id is None:
+	
+	def select_with_adjacent(self, x, y, match_id=None):
+		""" select pieces and all adjacent pieces with matching ids """		
+		# Clean the selected list when starting
+		if match_id is None: 
 			self.selected = []			
+		# Check for board boundaries
 		if x<0 or y<0 or x>self.columns-1 or y>self.rows-1:
-			return			
+			return
+		# Don't check on pieces already selected
 		if (x,y) in self.selected:
 			return
 			
 		bubble_id = self.board[x][y]
+		# Do not select if there is a match_id and it doesn't match
 		if not bubble_id or (match_id and match_id<>bubble_id):
-			return
+			return			
 		self.selected.append((x, y))
-		self.select(x-1, y, bubble_id)
-		self.select(x+1, y, bubble_id)
-		self.select(x, y-1, bubble_id)
-		self.select(x, y+1, bubble_id)
-		print "selected", x, y
-	
+		# Try to select all adjacent pieces with matching ids
+		self.select_with_adjacent(x-1, y, bubble_id)
+		self.select_with_adjacent(x+1, y, bubble_id)
+		self.select_with_adjacent(x, y-1, bubble_id)
+		self.select_with_adjacent(x, y+1, bubble_id)		
+
+	def remove_selected(self):
+		""" Remove selected pieces """
+		for (c,r) in self.selected:			
+			self.board[c][r] = 0
+		self.selected = []
+		
+	def remove_vertical_gaps(self):
+		""" Remove vertical gaps by moving pieces to bottom """
+		# For each column, create the list with non zero ids
+		# Final column = padding zeros+non zero ids
+		for x in range(self.columns):
+			no_gaps_pieces = [piece for piece in self.board[x] if piece]
+			self.board[x] = [0]*(self.rows-len(no_gaps_pieces)) + no_gaps_pieces		
+		
 
 def load_bubbles():
 	bubbles = []
@@ -75,7 +97,7 @@ def main():
 	clock = pygame.time.Clock()
 	
 	screen = pygame.display.set_mode(WINSIZE,0,8)
-	pygame.display.set_caption('Popit')
+	pygame.display.set_caption('Popzi')
 	
 	bubble_surfaces = load_bubbles()
 	bubble_w = bubble_surfaces[0].get_width()
@@ -106,20 +128,23 @@ def main():
 						board_x > columns-1 or board_y > rows-1 :
 						board_x = board_y = None
 					else:
-						playboard.select(board_x, board_y)
-		# Draw
+						playboard.select_with_adjacent(board_x, board_y)
+			elif e.type == MOUSEBUTTONDOWN:
+				if len(playboard.selected) > 2:
+					playboard.remove_selected()
+					playboard.remove_vertical_gaps()
+				
+
 		screen.fill(THECOLORS["black"])
-		for (c,r) in playboard.selected:
-			print "Selected", c, r
-			rect = pygame.rect.Rect((c*bubble_w), top_header+r*(bubble_h), bubble_w, bubble_h)	
-			box(screen, rect, THECOLORS["yellow"])						
-		
-		#filled_circle(screen, 60, 60, 20, THECOLORS["red"])
+		# Draw the selected color group background
+		if len(playboard.selected) > 2:
+			for (c,r) in playboard.selected:
+				rect = pygame.rect.Rect((c*bubble_w), top_header+r*(bubble_h), bubble_w, bubble_h)	
+				box(screen, rect, THECOLORS["yellow"])								
+		# Draw the bubbles
 		for c in range(playboard.columns):
 			for r in range(playboard.rows):
 				bubble_id = playboard.board[c][r]
-				#print "bubble_id=", bubble_id
-				#bubble_id = 2
 				if bubble_id != 0:
 					rect = pygame.rect.Rect((c*bubble_w)+1, top_header+r*(bubble_h), bubble_w, bubble_h)	
 					screen.blit(bubble_surfaces[bubble_id], rect)
