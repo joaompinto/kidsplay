@@ -32,8 +32,22 @@ class PlayBoard:
 				self.board[self.columns-c-1][self.rows-r-1] = bubble_id
 		print self.board
 		
-	def select(self, x, y):
-		self.selected = [(x, y)] if self.board[x][y] else []
+	def select(self, x, y, match_id=None):		
+		if match_id is None:
+			self.selected = []			
+		if x<0 or y<0 or x>self.columns-1 or y>self.rows-1:
+			return			
+		if (x,y) in self.selected:
+			return
+			
+		bubble_id = self.board[x][y]
+		if not bubble_id or (match_id and match_id<>bubble_id):
+			return
+		self.selected.append((x, y))
+		self.select(x-1, y, bubble_id)
+		self.select(x+1, y, bubble_id)
+		self.select(x, y-1, bubble_id)
+		self.select(x, y+1, bubble_id)
 		print "selected", x, y
 	
 
