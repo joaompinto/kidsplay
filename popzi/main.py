@@ -16,6 +16,11 @@ from random import randint
 
 APPEND_ROW_EVENT = pygame.USEREVENT + 1
 
+try:
+    import android
+    ANDROID = True
+except ImportError:
+    ANDROID = None
 
 class PlayBoard:
 	def __init__(self, columns, rows):		
@@ -105,9 +110,17 @@ class Game:
 		self.playboard.ramdom_rows(5)	
 		
 	def init(self):
+		#WINSIZE = 480, 800
 		WINSIZE = self.side, self.board_bottom	
 		pygame.init()	
-		pygame.mixer.init()	
+		if not ANDROID:
+			pygame.mixer.init()	
+		
+		# Map the back button to the escape key.
+		if ANDROID:
+			android.init()
+			android.map_key(android.KEYCODE_BACK, pygame.K_ESCAPE)
+        		
 		self.clock = pygame.time.Clock()			
 		self.screen = pygame.display.set_mode(WINSIZE,0,8)
 		pygame.display.set_caption('Popzi')
@@ -116,8 +129,9 @@ class Game:
 		self.bubble_w = self.bubble_surfaces[0].get_width()
 		self.bubble_h = self.bubble_surfaces[0].get_height()
 		
-		self.pop_sound = pygame.mixer.Sound("sfx/pop-Sith_Mas-485.wav")
-		self.wrong_sound = pygame.mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
+		if not ANDROID:
+			self.pop_sound = pygame.mixer.Sound("sfx/pop-Sith_Mas-485.wav")
+			self.wrong_sound = pygame.mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 	
 	def run(self):
 		# The target frames per second is used to "sleep" the main loop between
@@ -131,7 +145,10 @@ class Game:
 
 	def _check_events(self):		
 		playboard = self.playboard
-		events = pygame.event.get()        
+		events = pygame.event.get()    
+		# Android-specific:
+		if ANDROID and android.check_pause():
+			android.wait_for_resume()		    
 		# Handle events
 		for e in events:			
 			if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
@@ -147,11 +164,13 @@ class Game:
 				else:				
 					color_group = playboard.get_same_adjacent(board_x, board_y)
 					if len(color_group) > 1:
-						self.pop_sound.play()
+						if not ANDROID:
+							self.pop_sound.play()
 						playboard.remove(color_group)
 						playboard.remove_vertical_gaps()
 					elif len(color_group) == 1:
-						self.wrong_sound.play()
+						if not ANDROID:
+							self.wrong_sound.play()
 			elif e.type == APPEND_ROW_EVENT:						
 				self.playboard.append_row()
 		return True
@@ -173,9 +192,11 @@ class Game:
 					screen.blit(self.bubble_surfaces[bubble_id], rect)
 					
 		pygame.display.flip()
-	
-if __name__=="__main__":
+
+def main():
     game = Game()
     game.init()
     game.run()
-    
+
+if __name__=="__main__":
+	main()    
