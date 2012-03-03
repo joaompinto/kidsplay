@@ -12,6 +12,10 @@ import pygame
 from pygame.locals import *
 from pygame.color import THECOLORS
 from pygame.gfxdraw import box, filled_circle
+try:
+    import pygame.mixer as mixer
+except ImportError:
+    import android_mixer as mixer
 import random 
 from random import randint
 
@@ -77,33 +81,28 @@ class PlayBoard:
 		return self.same_adjancent
 
 	def remove(self, aList):
-		""" Remove selected pieces """
+		""" Remove list of pieces"""
 		for (c,r) in aList:			
 			self.board[c][r] = 0
 		
 	def remove_vertical_gaps(self):
-		""" Remove vertical gaps by moving pieces to bottom """
-		# For each column, create the list with non zero ids
-		# Final column = padding zeros followed by non zero ids
+		""" Remove vertical gaps by setting pieces to falling """
+		# For each column, flag when a gap was found
 		for x in range(self.columns):
-			no_gaps_pieces = [piece for piece in self.board[x] if piece]
-			self.board[x] = [0]*(self.rows-len(no_gaps_pieces)) + no_gaps_pieces		
-
-	def append_row(self):
-		""" Append a row with random pieces  """
-		# For each column, create the list with non zero ids
-		# Final column = padding zeros followed by non zero ids and
-		# an extra random bubble id
-		for x in range(self.columns):
-			no_gaps_pieces = [piece for piece in self.board[x] if piece]
-			bubble_id = randint(1, self.max_rand_id)
-			self.board[x] = [0]*(self.rows-len(no_gaps_pieces)-1) \
-				+ no_gaps_pieces + [bubble_id] 
-
-	def insert_row(self):
+			falling = False
+			for y in range(self.rows-1,-1,-1):
+				print y
+				if self.board[x][y] == 0:
+					falling = True
+				elif falling:
+						bubble_id = self.board[x][y]						
+						self.board[x][y] = 0
+						self.add_falling_piece(x, y*self.piece_h, bubble_id)
+			
+	def insert_row(self, row_nr=0):
 		for c in range(self.columns):
 			bubble_id = randint(1, self.max_rand_id)
-			self.add_falling_piece(c, 0, bubble_id)
+			self.add_falling_piece(c, row_nr*self.piece_h, bubble_id)
 			
 	def add_falling_piece(self, column, ypos, bubble_id):
 		""" 
@@ -130,15 +129,17 @@ class PlayBoard:
 		"""
 		for piece in self.falling_pieces:
 			column, ypos, bubble_id = piece
-			piece[1] += FALLING_SPEED
+			ypos += FALLING_SPEED
+			piece[1] = ypos
 			board_x = column
 			board_y = ypos/self.piece_h
+			#hit_y = (ypos+self.piece_h)/self.piece_h
 			# if hit ground 
 			if board_y == self.rows - 1: 
 				self.board[board_x][board_y] = bubble_id
 				piece[0] = -1 # Mark to delete
 			# if found a ground piece
-			elif self.board[board_x][board_y+1]!=0: # found piece
+			elif self.board[board_x][board_y+1]<>0: # found piece
 				self.board[board_x][board_y] = bubble_id
 				piece[0] = -1 # Mark to delete 				
 		# Remove deleted pieces
@@ -162,7 +163,7 @@ class Game:
 		os.environ['SDL_VIDEO_CENTERED'] = '1'
 		pygame.init()	
 		if not ANDROID:
-			pygame.mixer.init()	
+			mixer.init()	
 		
 		# Map the back button to the escape key.
 		if ANDROID:
@@ -177,9 +178,8 @@ class Game:
 		self.bubble_w = self.bubble_surfaces[0].get_width()
 		self.bubble_h = self.bubble_surfaces[0].get_height()
 		
-		if not ANDROID:
-			self.pop_sound = pygame.mixer.Sound("sfx/pop-Sith_Mas-485.wav")
-			self.wrong_sound = pygame.mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
+		self.pop_sound = mixer.Sound("sfx/pop-Sith_Mas-485.wav")
+		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 	
 	def run(self):
 		# The target frames per second is used to "sleep" the main loop between
@@ -187,7 +187,8 @@ class Game:
 		TARGET_FPS = 30
 		pygame.time.set_timer(APPEND_ROW_EVENT, 5*1000)
 		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
-		self.playboard.insert_row()
+		for row in range(0, 5):
+			self.playboard.insert_row(row)
 		# The Main Event Loop
 		while self._check_events():				 
 			self._draw()
@@ -213,13 +214,11 @@ class Game:
 				else:				
 					color_group = playboard.get_same_adjacent(board_x, board_y)
 					if len(color_group) > 1:
-						if not ANDROID:
-							self.pop_sound.play()
+						self.pop_sound.play()
 						playboard.remove(color_group)
 						playboard.remove_vertical_gaps()
 					elif len(color_group) == 1:
-						if not ANDROID:
-							self.wrong_sound.play()
+						self.wrong_sound.play()
 			elif e.type == APPEND_ROW_EVENT:						
 				self.playboard.insert_row()
 			elif e.type == FALLING_MOVE_EVENT:
