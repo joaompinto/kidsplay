@@ -14,9 +14,8 @@ from pygame.gfxdraw import box, filled_circle
 import random 
 from random import randint
 
-# The target frames per second is used to "sleep" the main loop between
-# screen redraws
-TARGET_FPS = 30
+APPEND_ROW_EVENT = pygame.USEREVENT + 1
+
 
 class PlayBoard:
 	def __init__(self, columns, rows):		
@@ -26,52 +25,65 @@ class PlayBoard:
 		self.board = [x[:] for x in [[0]*rows]*columns]		
 		# List of selected pieces
 		self.selected = []
+		self.rand_color = 5
 		
-	def ramdom_rows(self, nr_rows, rand_max):
+	def ramdom_rows(self, nr_rows):
 		""" Assign random values to the specified nr of bottom rows """
 
 		for c in range(self.columns):			
 			for r in range(nr_rows):			
-				bubble_id = randint(1, rand_max)
+				bubble_id = randint(1, self.rand_color)
 				self.board[self.columns-c-1][self.rows-r-1] = bubble_id
 	
-	def select_with_adjacent(self, x, y, match_id=None):
-		""" select pieces and all adjacent pieces with matching ids """		
-		# Clean the selected list when starting
-		if match_id is None: 
-			self.selected = []			
+	def get_same_adjacent(self, x, y, match_id=None):
+		""" return list of adjance pieces starting a x,y with the same id
+		"""
 		# Check for board boundaries
+		if match_id is None:
+			self.same_adjancent = []
+
 		if x<0 or y<0 or x>self.columns-1 or y>self.rows-1:
-			return
-		# Don't check on pieces already selected
-		if (x,y) in self.selected:
-			return
-			
+			return []
+		if (x, y) in self.same_adjancent:
+			return []
+					
 		bubble_id = self.board[x][y]
 		# Do not select if there is a match_id and it doesn't match
 		if not bubble_id or (match_id and match_id<>bubble_id):
-			return			
-		self.selected.append((x, y))
+			return []
+			
 		# Try to select all adjacent pieces with matching ids
-		self.select_with_adjacent(x-1, y, bubble_id)
-		self.select_with_adjacent(x+1, y, bubble_id)
-		self.select_with_adjacent(x, y-1, bubble_id)
-		self.select_with_adjacent(x, y+1, bubble_id)		
+		self.same_adjancent += [(x, y)]
+		self.get_same_adjacent(x-1, y, bubble_id)
+		self.get_same_adjacent(x+1, y, bubble_id)
+		self.get_same_adjacent(x, y-1, bubble_id)
+		self.get_same_adjacent(x, y+1, bubble_id)		
+		return self.same_adjancent
 
-	def remove_selected(self):
+	def remove(self, aList):
 		""" Remove selected pieces """
-		for (c,r) in self.selected:			
+		for (c,r) in aList:			
 			self.board[c][r] = 0
 		self.selected = []
 		
 	def remove_vertical_gaps(self):
 		""" Remove vertical gaps by moving pieces to bottom """
 		# For each column, create the list with non zero ids
-		# Final column = padding zeros+non zero ids
+		# Final column = padding zeros followed by non zero ids
 		for x in range(self.columns):
 			no_gaps_pieces = [piece for piece in self.board[x] if piece]
 			self.board[x] = [0]*(self.rows-len(no_gaps_pieces)) + no_gaps_pieces		
-		
+
+	def append_row(self):
+		""" Append a row with random pieces  """
+		# For each column, create the list with non zero ids
+		# Final column = padding zeros followed by non zero ids and
+		# an extra random bubble id
+		for x in range(self.columns):
+			no_gaps_pieces = [piece for piece in self.board[x] if piece]
+			bubble_id = randint(1, self.rand_color)
+			self.board[x] = [0]*(self.rows-len(no_gaps_pieces)-1) \
+				+ no_gaps_pieces + [bubble_id] 
 
 def load_bubbles():
 	bubbles = []
@@ -80,79 +92,90 @@ def load_bubbles():
 		bubble = pygame.image.load(fn)
 		bubbles.append(bubble)
 	return bubbles
-	
-def main():
-	random.seed()
+
+class Game:
 	top_header = 60
 	board_bottom = 640+top_header
 	side = 320
 	columns = 10
 	rows = 20	
 	playboard = PlayBoard(columns, rows)
-	playboard.ramdom_rows(5, 7)	
-	WINSIZE = side, board_bottom
-	
-	pygame.init()	
-	pygame.mixer.init()	
-	clock = pygame.time.Clock()
-	
-	screen = pygame.display.set_mode(WINSIZE,0,8)
-	pygame.display.set_caption('Popzi')
-	
-	bubble_surfaces = load_bubbles()
-	bubble_w = bubble_surfaces[0].get_width()
-	bubble_h = bubble_surfaces[0].get_height()
+	def __init__(self):
+		random.seed()
+		self.playboard.ramdom_rows(5)	
 		
-	last_board_x = last_board_y = None
-	# The Main Event Loop
-	done = False
-	while not done:
-		     
+	def init(self):
+		WINSIZE = self.side, self.board_bottom	
+		pygame.init()	
+		pygame.mixer.init()	
+		self.clock = pygame.time.Clock()			
+		self.screen = pygame.display.set_mode(WINSIZE,0,8)
+		pygame.display.set_caption('Popzi')
+	
+		self.bubble_surfaces = load_bubbles()
+		self.bubble_w = self.bubble_surfaces[0].get_width()
+		self.bubble_h = self.bubble_surfaces[0].get_height()
+		
+		self.pop_sound = pygame.mixer.Sound("sfx/pop-Sith_Mas-485.wav")
+		self.wrong_sound = pygame.mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
+	
+	def run(self):
+		# The target frames per second is used to "sleep" the main loop between
+		# screen redraws
+		TARGET_FPS = 30
+		pygame.time.set_timer(APPEND_ROW_EVENT, 5*1000)
+		# The Main Event Loop
+		while self._check_events():				 
+			self._draw()
+			self.clock.tick(TARGET_FPS)
+
+	def _check_events(self):		
+		playboard = self.playboard
 		events = pygame.event.get()        
 		# Handle events
-		for e in events:
-			if e.type == QUIT:
-				done = True
-				break
-			elif e.type == KEYDOWN:
-				if e.key == K_ESCAPE :
-					done = True
-					break						
-			elif e.type == MOUSEMOTION:				
-				x,y = pygame.mouse.get_pos()
-				board_x = x/bubble_w
-				board_y = (y-top_header)/bubble_h
-				# Don't update if nothing changed
-				if last_board_x != board_x or last_board_y != y:
-					if board_x < 0 or board_y < 0 or \
-						board_x > columns-1 or board_y > rows-1 :
-						board_x = board_y = None
-					else:
-						playboard.select_with_adjacent(board_x, board_y)
+		for e in events:			
+			if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
+				return False
+#			elif e.type == MOUSEMOTION:				
 			elif e.type == MOUSEBUTTONDOWN:
-				if len(playboard.selected) > 2:
-					playboard.remove_selected()
-					playboard.remove_vertical_gaps()
-				
-
+				x,y = e.pos
+				board_x = x/self.bubble_w
+				board_y = (y-self.top_header)/self.bubble_h	
+				if board_x < 0 or board_y < 0 or \
+					board_x > self.columns-1 or board_y > self.rows-1 :
+					board_x = board_y = None
+				else:				
+					color_group = playboard.get_same_adjacent(board_x, board_y)
+					if len(color_group) > 1:
+						self.pop_sound.play()
+						playboard.remove(color_group)
+						playboard.remove_vertical_gaps()
+					elif len(color_group) == 1:
+						self.wrong_sound.play()
+			elif e.type == APPEND_ROW_EVENT:						
+				self.playboard.append_row()
+		return True
+								
+	def _draw(self):
+		screen = self.screen
 		screen.fill(THECOLORS["black"])
 		# Draw the selected color group background
-		if len(playboard.selected) > 2:
-			for (c,r) in playboard.selected:
-				rect = pygame.rect.Rect((c*bubble_w), top_header+r*(bubble_h), bubble_w, bubble_h)	
+		if len(self.playboard.selected) > 2:
+			for (c,r) in self.playboard.selected:
+				rect = pygame.rect.Rect((c*self.bubble_w), self.top_header+r*(self.bubble_h), self.bubble_w, self.bubble_h)	
 				box(screen, rect, THECOLORS["yellow"])								
 		# Draw the bubbles
-		for c in range(playboard.columns):
-			for r in range(playboard.rows):
-				bubble_id = playboard.board[c][r]
+		for c in range(self.playboard.columns):
+			for r in range(self.playboard.rows):
+				bubble_id = self.playboard.board[c][r]
 				if bubble_id != 0:
-					rect = pygame.rect.Rect((c*bubble_w)+1, top_header+r*(bubble_h), bubble_w, bubble_h)	
-					screen.blit(bubble_surfaces[bubble_id], rect)
+					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*(self.bubble_h), self.bubble_w, self.bubble_h)	
+					screen.blit(self.bubble_surfaces[bubble_id], rect)
 					
-		pygame.display.flip()				
-		clock.tick(TARGET_FPS)
-	return
+		pygame.display.flip()
 	
 if __name__=="__main__":
-    main()
+    game = Game()
+    game.init()
+    game.run()
     
