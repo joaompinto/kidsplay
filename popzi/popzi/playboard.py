@@ -17,8 +17,14 @@ class PlayBoard:
 		# Items on the list = (column, ypos, bubble_id)
 		self.falling_pieces = []	
 		# Max random id that can be assigned to a board piece
-		self.max_rand_id = 5 
-				
+		self.max_rand_id = 5
+		
+	def start(self):
+		for c in range(self.columns):			
+			for r in range(self.rows):			
+				self.board[c][r] = 0
+		self.falling_pieces = []
+
 	def ramdom_rows(self, nr_rows):
 		""" Assign random values to the specified nr of bottom rows """
 		for c in range(self.columns):			

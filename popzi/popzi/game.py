@@ -22,7 +22,7 @@ except ImportError:
     import android.mixer as mixer
 import random 
 
-APPEND_ROW_EVENT = pygame.USEREVENT + 1
+INSERT_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
 
 TARGET_FPS = 30
@@ -45,7 +45,7 @@ class Game:
 	score = 0
 	playboard = PlayBoard(columns, rows, 32, 32)
 	# List of bubles being poped (count, position, bubble_id)
-	popping_bubbles = []
+	
 	def __init__(self):
 		random.seed()
 		#self.playboard.ramdom_rows(5)	
@@ -78,21 +78,33 @@ class Game:
 		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 		
 		self.score_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
-		fn = join('gfx', 'backgrounds', 'Abstract_blue_background7.jpg')
+		fn = join('gfx', 'backgrounds', 'green.jpg')
 		background = pygame.image.load(fn)
 		self.background = pygame.transform.scale(background, (WINSIZE))
 		self.start_button = Button(50, 100, "Start Game")
 		self.start_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 100)
-	
+		
+	def start(self):
+		self.score = 0
+		self.is_game_over = False
+		pygame.time.set_timer(INSERT_ROW_EVENT, 10*1000)
+		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
+		self.popping_bubbles = []
+		self.playboard.start()
+		for row in range(0, 5):
+			self.playboard.insert_row(row)
+		
 	def menu(self):
 		screen = self.screen
 		action = None
 		while True:	
 			for event in pygame.event.get():
-				mouse_pos = pygame.mouse.get_pos()
 				if event.type == MOUSEBUTTONDOWN:	
-						if self.start_button.is_pressed(mouse_pos):
-							self.run()
+					mouse_pos = pygame.mouse.get_pos()
+					if self.start_button.is_pressed(mouse_pos):
+						self.run()
+				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+					return False							
 			screen.blit(self.background, (0,0))							
 			screen.blit(self.start_button.image, self.start_button.rect)
 			pygame.display.flip()
@@ -102,10 +114,7 @@ class Game:
 		# The target frames per second is used to "sleep" the main loop between
 		# screen redraws
 		
-		pygame.time.set_timer(APPEND_ROW_EVENT, 5*1000)
-		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
-		for row in range(0, 5):
-			self.playboard.insert_row(row)
+		self.start()		
 		# The Main Event Loop
 		while self._check_events():				 
 			self._draw()
@@ -122,6 +131,10 @@ class Game:
 			if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
 				return False
 			elif e.type == MOUSEBUTTONDOWN:
+				if self.is_game_over:
+					if self.start_button.is_pressed(e.pos):
+						self.start()
+					return True
 				x,y = e.pos
 				board_x = x/self.bubble_w
 				board_y = (y-self.top_header)/self.bubble_h	
@@ -145,8 +158,17 @@ class Game:
 						playboard.remove_vertical_gaps()
 					elif color_count == 1:
 						self.wrong_sound.play()
-			elif e.type == APPEND_ROW_EVENT:						
-				self.playboard.insert_row()
+			elif e.type == INSERT_ROW_EVENT:
+				for c in range(self.playboard.columns):
+					# If there is a piece on the first row the game is over
+					if self.playboard.board[c][0] != 0:
+						print "Game is over!"
+						pygame.time.set_timer(INSERT_ROW_EVENT, 0)
+						pygame.time.set_timer(FALLING_MOVE_EVENT, 0)						
+						self.is_game_over = True						
+						break
+				if not self.is_game_over:
+					self.playboard.insert_row()
 			elif e.type == FALLING_MOVE_EVENT:
 				touch_down = self.playboard.falling_move(FALLING_SPEED)
 				# Decrease visible time count for popping bubbles
@@ -178,17 +200,22 @@ class Game:
 					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*self.bubble_h, self.bubble_w, self.bubble_h)	
 					screen.blit(self.bubble_surfaces[bubble_id], rect)
 							
-		text = self.score_font.render(' Score: %d ' %self.score, True, THECOLORS["white"])		
+		text = self.score_font.render(' Score: %d ' %self.score, True, THECOLORS["black"])		
 		textRect = pygame.rect.Rect((10,5)+text.get_size())
 		screen.blit(text, textRect)
+		if self.is_game_over:
+			text = self.score_font.render(' GAME OVER ', True, THECOLORS["red"], THECOLORS["black"])		
+			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), 150))
+			screen.blit(self.start_button.image, self.start_button.rect)
 		pygame.display.flip()
 
 	def load_bubbles(self):
 		""" Load bubbles image files """
 		mini_bubbles = []
 		bubbles = []
-		for n in range(8):
-			fn = join('gfx', 'balls', 'bubble-%s.gif' % (n+1))
+		for n in range(6):
+			#fn = join('gfx', 'balls', 'bubble-%s.gif' % (n+1))
+			fn = join('gfx', 'fruits', 'fruits_%s.png' % n)
 			bubble = pygame.image.load(fn)
 			bubbles.append(bubble)
 			fn = join('gfx', 'balls', 'bubble-%s-mini.png' % (n+1))
