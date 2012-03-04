@@ -63,7 +63,7 @@ class Game:
 			android.map_key(android.KEYCODE_BACK, pygame.K_ESCAPE)
         		
 		self.clock = pygame.time.Clock()			
-		self.screen = pygame.display.set_mode(WINSIZE,0,8)
+		self.screen = pygame.display.set_mode(WINSIZE)
 		pygame.display.set_caption('Popzi')
 	
 		self.bubble_surfaces,  self.mini_bubble_surfaces = self.load_bubbles()
@@ -76,6 +76,9 @@ class Game:
 		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 		
 		self.score_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
+		fn = join('gfx', 'backgrounds', 'Abstract_blue_background7.jpg')
+		background = pygame.image.load(fn)
+		self.background = pygame.transform.scale(background, (WINSIZE))
 	
 	def run(self):
 		# The target frames per second is used to "sleep" the main loop between
@@ -137,7 +140,8 @@ class Game:
 								
 	def _draw(self):
 		screen = self.screen
-		screen.fill(THECOLORS["black"])
+		screen.blit(self.background, (0,0))
+		#screen.fill(THECOLORS["black"])
 		# Draw popping bubbles
 		for pop_count, (c, r), bubble_id in self.popping_bubbles:
 			pos_x = (c*self.bubble_w)+(self.bubble_w/2)-(self.mini_w/2)
@@ -156,7 +160,7 @@ class Game:
 					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*self.bubble_h, self.bubble_w, self.bubble_h)	
 					screen.blit(self.bubble_surfaces[bubble_id], rect)
 				
-		text = self.score_font.render('Score: %d' %self.score, True, (255,255, 255), (0, 0, 0))		
+		text = self.score_font.render(' Score: %d ' %self.score, True, THECOLORS["white"])		
 		textRect = pygame.rect.Rect((10,5)+text.get_size())
 		screen.blit(text, textRect)
 		pygame.display.flip()
