@@ -42,6 +42,8 @@ class Game:
 	rows = 20	
 	score = 0
 	playboard = PlayBoard(columns, rows, 32, 32)
+	# List of bubles being poped (count, position, bubble_id)
+	popping_bubbles = []
 	def __init__(self):
 		random.seed()
 		#self.playboard.ramdom_rows(5)	
@@ -64,10 +66,12 @@ class Game:
 		self.screen = pygame.display.set_mode(WINSIZE,0,8)
 		pygame.display.set_caption('Popzi')
 	
-		self.bubble_surfaces = self.load_bubbles()
+		self.bubble_surfaces,  self.mini_bubble_surfaces = self.load_bubbles()
 		self.bubble_w = self.bubble_surfaces[0].get_width()
 		self.bubble_h = self.bubble_surfaces[0].get_height()
-		
+		self.mini_w = self.mini_bubble_surfaces[0].get_width()
+		self.mini_h = self.mini_bubble_surfaces[0].get_height()
+				
 		self.pop_sound = mixer.Sound("sfx/pop-Sith_Mas-485.wav")
 		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 		
@@ -108,11 +112,14 @@ class Game:
 					color_count = len(color_group)
 					if color_count > 1:
 						self.pop_sound.play()
+						# Update score
 						self.score += color_count
 						if color_count > 4:
 							color_count += 10
 						elif color_count > 6:
 							color_count += 20
+						for piece in color_group:
+							self.popping_bubbles.append([5, piece, self.playboard.board[piece[0]][piece[1]]])
 						playboard.remove(color_group)
 						playboard.remove_vertical_gaps()
 					elif color_count == 1:
@@ -121,11 +128,22 @@ class Game:
 				self.playboard.insert_row()
 			elif e.type == FALLING_MOVE_EVENT:
 				touch_down = self.playboard.falling_move(FALLING_SPEED)
+				# Decrease visible time count for popping bubbles
+				for piece in self.popping_bubbles:
+					piece[0] -= 1
+				# Keep only popping bubles whose time did not run out
+				self.popping_bubbles = [piece for piece in self.popping_bubbles if piece[0]>0]				
 		return True
 								
 	def _draw(self):
 		screen = self.screen
 		screen.fill(THECOLORS["black"])
+		# Draw popping bubbles
+		for pop_count, (c, r), bubble_id in self.popping_bubbles:
+			pos_x = (c*self.bubble_w)+(self.bubble_w/2)-(self.mini_w/2)
+			pos_y = (self.top_header+r*self.bubble_h)+(self.bubble_h/2)-(self.mini_h/2)
+			rect = pygame.rect.Rect(pos_x, pos_y, self.bubble_w, self.bubble_h)	
+			screen.blit(self.mini_bubble_surfaces[bubble_id], rect)
 		# Draw falling bubbles
 		for c, ypos, bubble_id in self.playboard.falling_pieces:
 			rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+ypos, self.bubble_w, self.bubble_h)
@@ -135,10 +153,9 @@ class Game:
 			for r in range(self.playboard.rows):
 				bubble_id = self.playboard.board[c][r]
 				if bubble_id != 0:
-					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*(self.bubble_h), self.bubble_w, self.bubble_h)	
+					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*self.bubble_h, self.bubble_w, self.bubble_h)	
 					screen.blit(self.bubble_surfaces[bubble_id], rect)
-		
-		
+				
 		text = self.score_font.render('Score: %d' %self.score, True, (255,255, 255), (0, 0, 0))		
 		textRect = pygame.rect.Rect((10,5)+text.get_size())
 		screen.blit(text, textRect)
@@ -146,9 +163,13 @@ class Game:
 
 	def load_bubbles(self):
 		""" Load bubbles image files """
+		mini_bubbles = []
 		bubbles = []
 		for n in range(8):
 			fn = join('gfx', 'balls', 'bubble-%s.gif' % (n+1))
 			bubble = pygame.image.load(fn)
 			bubbles.append(bubble)
-		return bubbles		
+			fn = join('gfx', 'balls', 'bubble-%s-mini.png' % (n+1))
+			bubble = pygame.image.load(fn)
+			mini_bubbles.append(bubble)
+		return bubbles, mini_bubbles

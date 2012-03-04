@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 from random import randint
-
 
 class PlayBoard:
 	""" The playboard is a two dimensional data store for the game date 
