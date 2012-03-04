@@ -14,6 +14,7 @@ import pygame
 from pygame.locals import *
 from pygame.color import THECOLORS
 from pygame.gfxdraw import box, filled_circle
+from popzi.buttons import Button
 
 try:
     import pygame.mixer as mixer
@@ -24,6 +25,7 @@ import random
 APPEND_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
 
+TARGET_FPS = 30
 
 FALLING_SPEED = 10
 FALLING_INTERVAL = 33
@@ -79,11 +81,27 @@ class Game:
 		fn = join('gfx', 'backgrounds', 'Abstract_blue_background7.jpg')
 		background = pygame.image.load(fn)
 		self.background = pygame.transform.scale(background, (WINSIZE))
+		self.start_button = Button(50, 100, "Start Game")
+		self.start_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 	
+	def menu(self):
+		screen = self.screen
+		action = None
+		while True:	
+			for event in pygame.event.get():
+				mouse_pos = pygame.mouse.get_pos()
+				if event.type == MOUSEBUTTONDOWN:	
+						if self.start_button.is_pressed(mouse_pos):
+							self.run()
+			screen.blit(self.background, (0,0))							
+			screen.blit(self.start_button.image, self.start_button.rect)
+			pygame.display.flip()
+			self.clock.tick(TARGET_FPS)
+		
 	def run(self):
 		# The target frames per second is used to "sleep" the main loop between
 		# screen redraws
-		TARGET_FPS = 30
+		
 		pygame.time.set_timer(APPEND_ROW_EVENT, 5*1000)
 		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
 		for row in range(0, 5):
@@ -159,7 +177,7 @@ class Game:
 				if bubble_id != 0:
 					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*self.bubble_h, self.bubble_w, self.bubble_h)	
 					screen.blit(self.bubble_surfaces[bubble_id], rect)
-				
+							
 		text = self.score_font.render(' Score: %d ' %self.score, True, THECOLORS["white"])		
 		textRect = pygame.rect.Rect((10,5)+text.get_size())
 		screen.blit(text, textRect)
