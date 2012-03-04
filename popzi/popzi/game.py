@@ -45,6 +45,7 @@ class Game:
 	score = 0
 	playboard = PlayBoard(columns, rows, 32, 32)
 	# List of bubles being poped (count, position, bubble_id)
+	theme = "fruits"
 	
 	def __init__(self):
 		random.seed()
@@ -78,7 +79,7 @@ class Game:
 		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
 		
 		self.score_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
-		fn = join('gfx', 'backgrounds', 'green.jpg')
+		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(fn)
 		self.background = pygame.transform.scale(background, (WINSIZE))
 		self.start_button = Button(50, 100, "Start Game")
@@ -187,18 +188,18 @@ class Game:
 			pos_x = (c*self.bubble_w)+(self.bubble_w/2)-(self.mini_w/2)
 			pos_y = (self.top_header+r*self.bubble_h)+(self.bubble_h/2)-(self.mini_h/2)
 			rect = pygame.rect.Rect(pos_x, pos_y, self.bubble_w, self.bubble_h)	
-			screen.blit(self.mini_bubble_surfaces[bubble_id], rect)
+			screen.blit(self.mini_bubble_surfaces[bubble_id-1], rect)
 		# Draw falling bubbles
 		for c, ypos, bubble_id in self.playboard.falling_pieces:
 			rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+ypos, self.bubble_w, self.bubble_h)
-			screen.blit(self.bubble_surfaces[bubble_id], rect)
+			screen.blit(self.bubble_surfaces[bubble_id-1], rect)
 		# Draw the bubbles
 		for c in range(self.playboard.columns):
 			for r in range(self.playboard.rows):
 				bubble_id = self.playboard.board[c][r]
 				if bubble_id != 0:
 					rect = pygame.rect.Rect((c*self.bubble_w)+1, self.top_header+r*self.bubble_h, self.bubble_w, self.bubble_h)	
-					screen.blit(self.bubble_surfaces[bubble_id], rect)
+					screen.blit(self.bubble_surfaces[bubble_id-1], rect)
 							
 		text = self.score_font.render(' Score: %d ' %self.score, True, THECOLORS["black"])		
 		textRect = pygame.rect.Rect((10,5)+text.get_size())
@@ -213,12 +214,11 @@ class Game:
 		""" Load bubbles image files """
 		mini_bubbles = []
 		bubbles = []
-		for n in range(6):
-			#fn = join('gfx', 'balls', 'bubble-%s.gif' % (n+1))
-			fn = join('gfx', 'fruits', 'fruits_%s.png' % n)
+		for n in range(5):
+			fn = join('gfx', 'themes', self.theme, 'piece-%d.png' % (n+1))
 			bubble = pygame.image.load(fn)
 			bubbles.append(bubble)
-			fn = join('gfx', 'balls', 'bubble-%s-mini.png' % (n+1))
+			fn = join('gfx', 'themes', self.theme, 'piece-%d-mini.png' % (n+1))
 			bubble = pygame.image.load(fn)
 			mini_bubbles.append(bubble)
 		return bubbles, mini_bubbles
