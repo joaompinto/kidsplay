@@ -1,4 +1,24 @@
-#load_image is used in most pygame programs for loading images
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""
+@copyright:
+    (C) Copyright 2012, Open Source Game Seed
+
+@license:
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.    
+"""
+
 import pygame
 
 import os
@@ -21,17 +41,16 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey, RLEACCEL)
     return image, image.get_rect()
 
-class Button(pygame.sprite.Sprite):
+class Button():
     """Class used to create a button, use setCords to set 
-        position of topleft corner. Method pressed() returns
-        a boolean and should be called inside the input loop."""
-    def __init__(self, x, y, text=None):
-        pygame.sprite.Sprite.__init__(self)
+        position of topleft corner."""
+        
+    def __init__(self, text=None):
         self.image, self.rect = load_image('dark.png')
-        self.rect.topleft = x,y
         font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
         text_img = font.render(text, True, THECOLORS["white"])
         self.image.blit(text_img, (self.rect.width/2-text_img.get_width()/2, 0))
+        self.text = text
         
     def setCords(self,x,y):
         self.rect.topleft = x,y
