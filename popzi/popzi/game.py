@@ -57,18 +57,14 @@ except ImportError:
     ANDROID = None		
     
 class Game:
-	top_header = 60
-	board_bottom = 640+top_header
-	side = 320
+	header_height = 60
 	columns = 10
 	rows = 20	
 	score = 0
-	# Dimension for the pieces
-	piece_w = piece_h = 32
 	# Dimension for the "mini" pieces, mini pieces are shown when
 	# a piece is popping up.
 	mini_w = mini_h = 16	
-	playboard = PlayBoard(columns, rows, 32, 32)
+	
 	# List of bubles being poped (count, position, piece_id)
 	theme = "bubbles"
 	
@@ -77,10 +73,12 @@ class Game:
 		#self.playboard.ramdom_rows(5)	
 		
 	def init(self):
-		#WINSIZE = 480, 800
-		WINSIZE = self.side, self.board_bottom	
+		WINSIZE = 480, 800
 		if not ANDROID:
 			os.environ['SDL_VIDEO_CENTERED'] = '1'
+			WINSIZE = 480, 800
+		else:
+			WINSIZE = 0, 0
 		pygame.init()	
 		if not ANDROID:
 			mixer.init()	
@@ -89,9 +87,10 @@ class Game:
 		if ANDROID:
 			android.init()
 			android.map_key(android.KEYCODE_BACK, pygame.K_ESCAPE)
-        		
+
 		self.clock = pygame.time.Clock()			
-		self.screen = pygame.display.set_mode(WINSIZE)
+		screen = self.screen = pygame.display.set_mode(WINSIZE)
+		self.width, self.height = screen.get_width(), screen.get_height()
 		pygame.display.set_caption('Popzi')
 					
 		self.pop_sound = mixer.Sound("sfx/pop-Sith_Mas-485.wav")
@@ -103,7 +102,15 @@ class Game:
 		self.start_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 		self.themes_button = Button("Select theme")
 		self.themes_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 150)
-
+		
+		# Dimension for the pieces
+		horizontal_size = self.screen.get_width()/10
+		vertical_size = (self.screen.get_height()-self.header_height)/20
+		self.piece_w = self.piece_h = vertical_size if vertical_size < horizontal_size else horizontal_size
+		self.playboard = PlayBoard(self.columns, self.rows, self.piece_w, self.piece_h)
+		self.h_border = (self.screen.get_width()-(self.piece_w*10))/2
+		if self.h_border < 0: self.h_border = 0
+		
 		self._read_theme_config()
 		
 	def _read_theme_config(self):
@@ -126,6 +133,7 @@ class Game:
 		self.drop_row_interval = 10
 		self.level_score_goal = 50
 		self.level_score = 0
+		self.level = 1
 		pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
 		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
 		self.popping_pieces = []
@@ -165,7 +173,7 @@ class Game:
 			self.clock.tick(TARGET_FPS)
 
 	def _set_theme(self):
-		WINSIZE = self.side, self.board_bottom	
+		WINSIZE = self.width, self.height
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(fn)							
 		self.background = pygame.transform.scale(background, (WINSIZE))
@@ -229,8 +237,8 @@ class Game:
 						self.start()
 					return True
 				x,y = e.pos
-				board_x = x/self.piece_w
-				board_y = (y-self.top_header)/self.piece_h	
+				board_x = (x-self.h_border)/self.piece_w
+				board_y = (y-self.header_height)/self.piece_h	
 				if board_x < 0 or board_y < 0 or \
 					board_x > self.columns-1 or board_y > self.rows-1 :
 					board_x = board_y = None
@@ -246,7 +254,7 @@ class Game:
 						elif matching_count > 6:
 							self.score += 20
 						for x,y  in matching_group:
-							piece_id = self.playboard.board[x][y]
+							piece_id = self.playboard.get_piece(x, y)
 							self.popping_pieces.append([5, (x,y), piece_id])
 						playboard.remove(matching_group)
 						playboard.remove_vertical_gaps()
@@ -255,7 +263,7 @@ class Game:
 			elif e.type == INSERT_ROW_EVENT:
 				for c in range(self.playboard.columns):
 					# If there is a piece on the first row the game is over
-					if self.playboard.board[c][0] != 0:
+					if self.playboard.get_piece(c, 0) != 0:
 						pygame.time.set_timer(INSERT_ROW_EVENT, 0)
 						pygame.time.set_timer(FALLING_MOVE_EVENT, 0)						
 						self.is_game_over = True						
@@ -276,19 +284,19 @@ class Game:
 		screen.blit(self.background, (0,0))
 		# Draw popping pieces
 		for pop_count, (c, r), piece_id in self.popping_pieces:
-			pos_x = (c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
-			pos_y = (self.top_header+r*self.piece_h)+(self.piece_h/2)-(self.mini_h/2)
+			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
+			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.mini_h/2)
 			screen.blit(self.mini_piece_surfaces[piece_id-1], (pos_x, pos_y))
 		# Draw falling pieces
 		for c, ypos, piece_id in self.playboard.falling_pieces:
-			pos = ((c*self.piece_w)+1, self.top_header+ypos)
+			pos = (self.h_border+(c*self.piece_w), self.header_height+ypos)
 			screen.blit(self.piece_surfaces[piece_id-1], pos)
 		# Draw the pieces
 		for c in range(self.playboard.columns):
 			for r in range(self.playboard.rows):
-				piece_id = self.playboard.board[c][r]
+				piece_id = self.playboard.get_piece(c, r)
 				if piece_id != 0:
-					pos = ((c*self.piece_w)+1, self.top_header+r*self.piece_h)
+					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
 					screen.blit(self.piece_surfaces[piece_id-1], pos)
 		# Score text
 		text = self.score_font.render(' Score: %d ' % self.score, True, THECOLORS["black"])		

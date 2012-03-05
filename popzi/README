@@ -1,7 +1,10 @@
 Implementing a "same color" style game just for fun.
 
 Credits
-	gfx/balls/* from Frozen Bubble http://www.frozen-bubble.org/
+	gfx/theme/bubbles/
+		piece* from Frozen Bubble http://www.frozen-bubble.org/
+	gfx/theme/fruits/
+		piece* from http://openclipart.org/		
 	pop sound from http://www.flashkit.com/soundfx/Cartoon/Pops/pop-Sith_Mas-7724/index.php
 	wrong touch sound from http://www.flashkit.com/soundfx/Electronic/Beeps/Buzz_But-wwwbeat-8524/index.php
-	backgroun image: http://callofduty.wikia.com/wiki/File:Abstract_blue_background7.jpg
+	

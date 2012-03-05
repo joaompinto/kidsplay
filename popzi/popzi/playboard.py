@@ -31,7 +31,7 @@ class PlayBoard:
 		self.piece_h = piece_h
 		# Create two dimentional array using list comprehension
 		# This array stores data for the static pieces on the game board
-		self.board = [x[:] for x in [[0]*rows]*columns]
+		self._board = [x[:] for x in [[0]*rows]*columns]
 		# List of (animated) falling pieces 
 		# Items on the list = (column, ypos, bubble_id)
 		self.falling_pieces = []	
@@ -41,7 +41,7 @@ class PlayBoard:
 	def start(self):
 		for c in range(self.columns):			
 			for r in range(self.rows):			
-				self.board[c][r] = 0
+				self._board[c][r] = 0
 		self.falling_pieces = []
 
 	def ramdom_rows(self, nr_rows):
@@ -49,7 +49,7 @@ class PlayBoard:
 		for c in range(self.columns):			
 			for r in range(nr_rows):			
 				bubble_id = randint(1, self.max_rand_id)
-				self.board[self.columns-c-1][self.rows-r-1] = bubble_id
+				self._board[self.columns-c-1][self.rows-r-1] = bubble_id
 	
 	def get_same_adjacent(self, x, y, match_id=None):
 		""" return list of adjance pieces starting a x,y with the same id """
@@ -62,7 +62,7 @@ class PlayBoard:
 		if (x, y) in self.same_adjancent:
 			return []
 					
-		bubble_id = self.board[x][y]
+		bubble_id = self._board[x][y]
 		# Do not select if there is a match_id and it doesn't match
 		if not bubble_id or (match_id and match_id<>bubble_id):
 			return []
@@ -78,7 +78,7 @@ class PlayBoard:
 	def remove(self, aList):
 		""" Remove list of pieces"""
 		for (c,r) in aList:			
-			self.board[c][r] = 0
+			self._board[c][r] = 0
 		
 	def remove_vertical_gaps(self):
 		""" Remove vertical gaps by setting pieces to falling """
@@ -86,17 +86,23 @@ class PlayBoard:
 		for x in range(self.columns):
 			falling = False
 			for y in range(self.rows-1,-1,-1):
-				if self.board[x][y] == 0:
+				if self._board[x][y] == 0:
 					falling = True
 				elif falling:
-						bubble_id = self.board[x][y]						
-						self.board[x][y] = 0
+						bubble_id = self._board[x][y]						
+						self._board[x][y] = 0
 						self.add_falling_piece(x, y*self.piece_h, bubble_id)
 			
 	def insert_row(self, row_nr=0):
 		for c in range(self.columns):
 			bubble_id = randint(1, self.max_rand_id)
 			self.add_falling_piece(c, row_nr*self.piece_h, bubble_id)
+			
+	def set_piece(self, x, y, piece_id):
+		self._board[x][y] = piece_id
+		
+	def get_piece(self, x, y):
+		return self._board[x][y]	
 			
 	def add_falling_piece(self, column, ypos, bubble_id):
 		""" 
@@ -105,7 +111,7 @@ class PlayBoard:
 		"""
 		board_x = column
 		board_y = ypos/self.piece_h
-		if self.board[board_x][board_y] != 0:
+		if self._board[board_x][board_y] != 0:
 			raise Exception("Overwriting piece!?")
 		insert_pos = len(self.falling_pieces)
 		# Insert orderered by ypos, descendent
@@ -127,14 +133,13 @@ class PlayBoard:
 			piece[1] = ypos
 			board_x = column
 			board_y = ypos/self.piece_h
-			#hit_y = (ypos+self.piece_h)/self.piece_h
 			# if hit ground 
 			if board_y == self.rows - 1: 
-				self.board[board_x][board_y] = bubble_id
+				self._board[board_x][board_y] = bubble_id
 				piece[0] = -1 # Mark to delete
 			# if found a ground piece
-			elif self.board[board_x][board_y+1]<>0: # found piece
-				self.board[board_x][board_y] = bubble_id
+			elif self._board[board_x][board_y+1]<>0: # found piece
+				self._board[board_x][board_y] = bubble_id
 				piece[0] = -1 # Mark to delete 				
 		# Remove deleted pieces
 		self.falling_pieces = [piece for piece in self.falling_pieces if piece[0]<>-1]
