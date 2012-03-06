@@ -1,10 +1,2 @@
-Implementing a "same color" style game just for fun.
-
-Credits
-	gfx/theme/bubbles/
-		piece* from Frozen Bubble http://www.frozen-bubble.org/
-	gfx/theme/fruits/
-		piece* from http://openclipart.org/		
-	pop sound from http://www.flashkit.com/soundfx/Cartoon/Pops/pop-Sith_Mas-7724/index.php
-	wrong touch sound from http://www.flashkit.com/soundfx/Electronic/Beeps/Buzz_But-wwwbeat-8524/index.php
-	
+You can launch the game from the current directory with:
+  ./main.py

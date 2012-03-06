@@ -2,21 +2,21 @@
 # -*- coding: utf-8 -*-
 """
 @copyright:
-    (C) Copyright 2012, Open Source Game Seed
+  (C) Copyright 2012, Open Source Game Seed <devs at osgameseed dot org>
 
 @license:
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
     
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
     
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.    
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.    
 """
 
 import time
@@ -32,7 +32,7 @@ from os.path import join
 import pygame
 from pygame.locals import *
 from pygame.color import THECOLORS
-from pygame.gfxdraw import box, filled_circle
+from pygame.gfxdraw import box, rectangle, filled_circle
 from popzi.buttons import Button
 
 try:
@@ -44,7 +44,7 @@ import random
 INSERT_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
 
-THEMES = ['Bubbles', 'Fruits']
+THEMES = ['Marbles', 'Fruits']
 TARGET_FPS = 30
 
 FALLING_SPEED = 10
@@ -60,20 +60,18 @@ class Game:
 	header_height = 60
 	columns = 10
 	rows = 20	
-	score = 0
 	# Dimension for the "mini" pieces, mini pieces are shown when
 	# a piece is popping up.
 	mini_w = mini_h = 16	
 	
 	# List of bubles being poped (count, position, piece_id)
-	theme = "bubbles"
+	theme = "marbles"
 	
 	def __init__(self):
 		random.seed()
 		#self.playboard.ramdom_rows(5)	
 		
 	def init(self):
-		WINSIZE = 480, 800
 		if not ANDROID:
 			os.environ['SDL_VIDEO_CENTERED'] = '1'
 			WINSIZE = 480, 800
@@ -93,15 +91,14 @@ class Game:
 		self.width, self.height = screen.get_width(), screen.get_height()
 		pygame.display.set_caption('Popzi')
 					
-		self.pop_sound = mixer.Sound("sfx/pop-Sith_Mas-485.wav")
-		self.wrong_sound = mixer.Sound("sfx/Buzz_But-wwwbeat-1892.wav")
+		self.pop_sound = mixer.Sound("sfx/pop.wav")
 		
 		self.score_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)		
 		
 		self.start_button = Button("Start game")
 		self.start_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 		self.themes_button = Button("Select theme")
-		self.themes_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 150)
+		self.themes_button.setCords((self.screen.get_width()/2) - (self.start_button.rect.width/2), 100+(self.start_button.rect.height*2))
 		
 		# Dimension for the pieces
 		horizontal_size = self.screen.get_width()/10
@@ -128,18 +125,36 @@ class Game:
 		
 			
 	def start(self):
-		self.score = 0
+		self.level = 1
+		self.score = self.level_score = self.remaining_score = 0
 		self.is_game_over = False
 		self.drop_row_interval = 10
-		self.level_score_goal = 50
-		self.level_score = 0
 		self.level = 1
-		pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
-		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
+		self._start_level()
+		
+	def _start_level(self):		
+		self.level_score = self.remaining_score
+		# Keep remaining score
+		self.is_level_complete = False
+		level = self.level
+		
+		# Adjust game settings based on the level
+		self.drop_row_interval = 11 - self.level 
+		if self.drop_row_interval < 1:
+			self.drop_row_interval = 1	
+		starting_rows = 4+self.level
+		if starting_rows > 10:
+			starting_rows = 10
+		self.level_score_goal = 100*level
+		
+		# Restart board
 		self.popping_pieces = []
 		self.playboard.start()
-		for row in range(0, 5):
+		for row in range(0, starting_rows):
 			self.playboard.insert_row(row)
+		# Start timers
+		pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
+		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
 			
 	def _config_file(self, fname):
 		""" Return full filename for a config file based on the platform """
@@ -236,6 +251,12 @@ class Game:
 					if self.start_button.is_pressed(e.pos):
 						self.start()
 					return True
+				# Level completed only accepts touch after a 2 seconds wait
+				elif self.is_level_complete:
+					if time.clock() - self.level_complete_time > 2:					
+						self.level += 1
+						self._start_level()
+					return True					
 				x,y = e.pos
 				board_x = (x-self.h_border)/self.piece_w
 				board_y = (y-self.header_height)/self.piece_h	
@@ -248,18 +269,26 @@ class Game:
 					if matching_count > 1:
 						self.pop_sound.play()
 						# Update score
-						self.score += matching_count
+						score = matching_count
 						if matching_count > 4:
-							self.score += 10
+							score += 10
 						elif matching_count > 6:
-							self.score += 20
+							score += 20
+						self.score += score							
+						self.level_score += score
 						for x,y  in matching_group:
 							piece_id = self.playboard.get_piece(x, y)
 							self.popping_pieces.append([5, (x,y), piece_id])
 						playboard.remove(matching_group)
 						playboard.remove_vertical_gaps()
-					elif matching_count == 1:
-						self.wrong_sound.play()
+						# Level is complete
+						self.remaining_score = self.level_score - self.level_score_goal
+						if self.remaining_score >= 0:							
+							pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
+							pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
+							self.level_score = self.level_score_goal	
+							self.is_level_complete = True
+							self.level_complete_time = time.clock()
 			elif e.type == INSERT_ROW_EVENT:
 				for c in range(self.playboard.columns):
 					# If there is a piece on the first row the game is over
@@ -282,6 +311,38 @@ class Game:
 	def _draw(self):
 		screen = self.screen
 		screen.blit(self.background, (0,0))
+
+		# Score text
+		text = self.score_font.render(' Score: %d ' % self.score, True, 
+			THECOLORS["white"], THECOLORS["black"])		
+		screen.blit(text, (10,5))
+		
+
+		# Level text
+		text = self.score_font.render(' Level: %d ' % self.level, True, 
+			THECOLORS["white"], THECOLORS["black"])		
+		screen.blit(text, (self.width-text.get_width()-5,5))
+		
+		# Level progress rectangle
+		rect = pygame.Rect(20, 5+text.get_height(), self.width-40, 20)		
+		rectangle(screen, rect, THECOLORS["white"])
+		
+		# Level progress indicator (fill)
+		filled = (float(self.level_score)/self.level_score_goal)*(self.width-40)
+		rect = pygame.Rect(20, 5+text.get_height(), filled, 20)
+		screen.fill(THECOLORS["white"], rect, special_flags=0)
+		rectangle(screen, rect, THECOLORS["white"])
+		
+		# Game over label when required
+		if self.is_game_over:
+			text = self.score_font.render(' GAME OVER ', True, THECOLORS["red"], THECOLORS["black"])		
+			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), 150))
+			screen.blit(self.start_button.image, self.start_button.rect)	
+			
+		if self.is_level_complete:
+			text = self.score_font.render(' LEVEL COMPLETE! ', True, THECOLORS["yellow"], THECOLORS["black"])		
+			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), 150))
+						
 		# Draw popping pieces
 		for pop_count, (c, r), piece_id in self.popping_pieces:
 			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
@@ -298,14 +359,7 @@ class Game:
 				if piece_id != 0:
 					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
 					screen.blit(self.piece_surfaces[piece_id-1], pos)
-		# Score text
-		text = self.score_font.render(' Score: %d ' % self.score, True, THECOLORS["black"])		
-		screen.blit(text, (10,5))
-		# Game over label
-		if self.is_game_over:
-			text = self.score_font.render(' GAME OVER ', True, THECOLORS["red"], THECOLORS["black"])		
-			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), 150))
-			screen.blit(self.start_button.image, self.start_button.rect)
+					
 		pygame.display.flip()
 
 	def _load_pieces(self):
