@@ -426,7 +426,7 @@ class Game:
 				
 			
 		if self.is_level_complete:
-			text = self.completed_font.render(' LEVEL COMPLETE! ', True, THECOLORS["blue"], THECOLORS["yellow"])		
+			text = self.completed_font.render(' LEVEL COMPLETED ', True, THECOLORS["blue"], THECOLORS["yellow"])		
 			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.height/2-text.get_height()/2))
 					
 		pygame.display.flip()

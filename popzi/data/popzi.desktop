@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Popzi
+Comment=Group and pop the objects
+Exec=popzi
+Icon=popzi-icon
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Categories=Game;ArcadeGame;
