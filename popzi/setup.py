@@ -23,13 +23,6 @@ from popzi.version import VERSION
 from os.path import join
 from glob import glob
 
-themes = []
-themes_dir = glob(join('gfx', 'themes', '*'))
-for theme in themes_dir:
-	themes.append((theme, glob(join(theme,'*'))))
-
-print themes
-
 setup(name="popzi",
 	version=VERSION,
 	description="A simple group and pop objects game.",
@@ -40,8 +33,14 @@ setup(name="popzi",
 		package_dir = {'popzi': 'popzi'},
 		scripts = ['bin/popzi'],
 		data_files = [
-			(themes)
+			('share/popzi/', ['android-icon.png'] ),
+			('share/popzi/fonts', glob('fonts/*')),
+			('share/popzi/sfx', glob('sfx/*')),			
+			('share/popzi/gfx/buttons', glob('gfx/buttons/*')),
+			('share/popzi/gfx/themes/fruits', glob('gfx/themes/fruits/*')),
+			('share/popzi/gfx/themes/marbles', glob('gfx/themes/marbles/*')),			
 			('share/applications', ['data/popzi.desktop']),
 			('share/pixmaps', ['data/popzi-icon.png'])
 		],
 	)
+

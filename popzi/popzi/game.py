@@ -35,6 +35,8 @@ from pygame.locals import *
 from pygame.color import THECOLORS
 from pygame.gfxdraw import box, rectangle, filled_circle
 from popzi.buttons import Button
+import popzi.resources as resources
+from resources import get_resource
 
 try:
     import pygame.mixer as mixer
@@ -52,6 +54,8 @@ TARGET_FPS = 30
 FALLING_SPEED = 10
 FALLING_INTERVAL = 33
 POPPING_INTERVAL = 33
+
+resources.DATA_DIR = "/usr/share/popzi"
 
 try:
     import android
@@ -91,16 +95,16 @@ class Game:
 
 		self.clock = pygame.time.Clock()			
 		if not ANDROID:
-			self.icon = pygame.image.load('android-icon.png')		
+			self.icon = pygame.image.load(get_resource('android-icon.png'))
 			pygame.display.set_icon(self.icon)
 		screen = self.screen = pygame.display.set_mode(WINSIZE)
 		self.width, self.height = screen.get_width(), screen.get_height()
 		pygame.display.set_caption('Popzi')
 					
-		self.pop_sound = mixer.Sound("sfx/pop.ogg")
+		self.pop_sound = mixer.Sound(get_resource("sfx/pop.ogg"))
 		
-		self.score_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
-		self.completed_font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 40)
+		self.score_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 25)
+		self.completed_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 40)
 		
 		self.start_button = Button("Start game")		
 		self.themes_button = Button("Select theme")
@@ -237,7 +241,7 @@ class Game:
 	def _set_theme(self):
 		WINSIZE = self.width, self.height
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
-		background = pygame.image.load(fn)							
+		background = pygame.image.load(get_resource(fn))							
 		self.background = pygame.transform.scale(background, (WINSIZE))
 		self.piece_surfaces,  self.mini_piece_surfaces = self._load_pieces()
 		
@@ -437,7 +441,7 @@ class Game:
 		pieces = []
 		for n in range(5):
 			fn = join('gfx', 'themes', self.theme, 'piece-%d.png' % (n+1))
-			piece = pygame.image.load(fn)
+			piece = pygame.image.load(get_resource(fn))
 			piece = pygame.transform.scale(piece, (self.piece_w, self.piece_h))
 			pieces.append(piece)
 			mini_pieces.append(pygame.transform.scale(piece, (self.mini_w, self.mini_h)))

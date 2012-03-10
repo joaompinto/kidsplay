@@ -25,12 +25,13 @@ import os
 from os.path import join
 from pygame.locals import *
 from pygame.color import THECOLORS
+from resources import get_resource
 
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('gfx', 'buttons', name)
     try:
-        image = pygame.image.load(fullname)
+        image = pygame.image.load(get_resource(fullname))
     except pygame.error, message:
         print 'Cannot load image:', fullname
         raise SystemExit, message
@@ -47,7 +48,7 @@ class Button():
         
     def __init__(self, text=None):
         self.image, self.rect = load_image('dark.png')
-        font = pygame.font.Font(join("fonts", "FreeSans.ttf"), 25)
+        font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 25)
         text_img = font.render(text, True, THECOLORS["white"])
         self.image.blit(text_img, (self.rect.width/2-text_img.get_width()/2, 0))
         self.text = text
