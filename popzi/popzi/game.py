@@ -46,14 +46,13 @@ except ImportError:
   
 INSERT_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
-POPPING_EVENT = pygame.USEREVENT + 3
+
 
 THEMES = ['Fruits', 'Marbles']
 TARGET_FPS = 30
 
 FALLING_SPEED = 10
 FALLING_INTERVAL = 33
-POPPING_INTERVAL = 33
 
 resources.DATA_DIR = "/usr/share/popzi"
     
@@ -144,14 +143,13 @@ class Game:
 		self.level_score_goal = 100*level
 		
 		# Restart board
-		self.popping_pieces = []
 		self.playboard.start()
 		for row in range(0, starting_rows):
 			self.playboard.insert_row(row)
 		# Start timers
 		pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
 		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
-		pygame.time.set_timer(POPPING_EVENT, POPPING_INTERVAL)
+		
 			
 	def _config_file(self, fname):
 		""" Return full filename for a config file based on the platform """
@@ -282,7 +280,8 @@ class Game:
 		if ANDROID and android.check_pause():
 			android.wait_for_resume()		    
 		# Handle events
-		for e in events:			
+		for e in events:	
+			self.playboard.check_event(e)
 			if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
 				return False
 			elif e.type == MOUSEBUTTONDOWN:
@@ -316,7 +315,7 @@ class Game:
 						self.level_score += score
 						for x,y  in matching_group:
 							piece_id = self.playboard.get_piece(x, y)
-							self.popping_pieces.append([5, (x,y), piece_id])
+							self.playboard.add_popping([5, (x,y), piece_id])							
 						playboard.remove(matching_group)
 						playboard.remove_vertical_gaps()
 						# Level is complete
@@ -351,11 +350,6 @@ class Game:
 			elif e.type == FALLING_MOVE_EVENT:
 				touch_down = self.playboard.falling_move(FALLING_SPEED)
 				# Decrease visible time count for popping pieces
-			elif e.type == POPPING_EVENT:					
-				for piece in self.popping_pieces:
-					piece[0] -= 1				
-				# Keep only popping bubles whose time did not run out
-				self.popping_pieces = [piece for piece in self.popping_pieces if piece[0]>0]				
 		return True
 								
 	def _draw(self):

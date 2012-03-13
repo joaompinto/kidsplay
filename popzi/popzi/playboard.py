@@ -22,6 +22,10 @@
 from random import randint
 import pygame
 
+
+POPPING_INTERVAL = 33
+POPPING_EVENT = pygame.USEREVENT + 3
+
 class PlayBoard:
 	""" The playboard is a two dimensional data store for the game date 
 	it also provides some helper methods for the game logic """
@@ -50,7 +54,6 @@ class PlayBoard:
 			self.h_border = 0
 		self.surfaces  = []
 		self.mini_surfaces  = []
-		self.popping_pieces = []
 		
 		
 	def start(self):
@@ -58,7 +61,12 @@ class PlayBoard:
 			for r in range(self.rows):			
 				self._board[c][r] = 0
 		self.falling_pieces = []
+		self.popping_pieces = []
+		pygame.time.set_timer(POPPING_EVENT, POPPING_INTERVAL)
 
+	def add_popping(self, (data)):
+		self.popping_pieces.append(data)
+		
 	def ramdom_rows(self, nr_rows):
 		""" Assign random values to the specified nr of bottom rows """
 		for c in range(self.columns):			
@@ -137,6 +145,13 @@ class PlayBoard:
 				break
 		self.falling_pieces.insert(insert_pos, [column, ypos, bubble_id])
 
+	def check_event(self, event):
+		if event.type == POPPING_EVENT:					
+			for piece in self.popping_pieces:
+				piece[0] -= 1				
+			# Keep only popping bubles whose time did not run out
+			self.popping_pieces = [piece for piece in self.popping_pieces if piece[0]>0]				
+
 	def falling_move(self, speed):
 		""" 
 		Move falling pieces
@@ -162,6 +177,7 @@ class PlayBoard:
 
 	def set_surfaces(self, surfaces):	
 		self.surfaces = []
+		self.mini_surfaces = []
 		for surface in surfaces:
 			surface = pygame.transform.scale(surface, (self.piece_w, self.piece_h))
 			mini_surface = pygame.transform.scale(surface, (self.piece_w/2, self.piece_h/2))
@@ -177,9 +193,10 @@ class PlayBoard:
 		
 		# Draw popping pieces
 		for pop_count, (c, r), piece_id in self.popping_pieces:
-			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
-			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.mini_h/2)
+			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.piece_w/4)
+			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.piece_w/4)
 			screen.blit(self.mini_surfaces[piece_id-1], (pos_x, pos_y))
+			print "Drawn mini piece"
 			
 		# Draw falling pieces
 		for c, ypos, piece_id in self.falling_pieces:
