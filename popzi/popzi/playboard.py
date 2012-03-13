@@ -20,15 +20,14 @@
 """
 
 from random import randint
+import pygame
 
 class PlayBoard:
 	""" The playboard is a two dimensional data store for the game date 
 	it also provides some helper methods for the game logic """
-	def __init__(self, columns, rows, piece_w, piece_h):		
+	def __init__(self, screen, columns, rows, header_height=None):		
 		self.rows = rows
 		self.columns = columns		
-		self.piece_w = piece_w
-		self.piece_h = piece_h
 		# Create two dimentional array using list comprehension
 		# This array stores data for the static pieces on the game board
 		self._board = [x[:] for x in [[0]*rows]*columns]
@@ -37,6 +36,22 @@ class PlayBoard:
 		self.falling_pieces = []	
 		# Max random id that can be assigned to a board piece
 		self.max_rand_id = 5
+		self.header_height = header_height
+		
+		self.screen = screen
+		self.width, self.height = screen.get_width(), screen.get_height()
+		
+		# Dimension for the pieces		
+		horizontal_size = self.width / self.columns
+		vertical_size = (self.height-self.header_height) / self.rows
+		self.piece_w = self.piece_h = vertical_size if vertical_size < horizontal_size else horizontal_size
+		self.h_border = (self.width-(self.piece_w*self.columns))/2
+		if self.h_border < 0: 
+			self.h_border = 0
+		self.surfaces  = []
+		self.mini_surfaces  = []
+		self.popping_pieces = []
+		
 		
 	def start(self):
 		for c in range(self.columns):			
@@ -76,7 +91,7 @@ class PlayBoard:
 		return self.same_adjancent
 
 	def remove(self, aList):
-		""" Remove list of pieces"""
+		""" Remove list of pieces"""		
 		for (c,r) in aList:			
 			self._board[c][r] = 0
 		
@@ -89,14 +104,13 @@ class PlayBoard:
 				if self._board[x][y] == 0:
 					falling = True
 				elif falling:
-						bubble_id = self._board[x][y]						
+						bubble_id = self._board[x][y]	
 						self._board[x][y] = 0
-						self.add_falling_piece(x, y*self.piece_h, bubble_id)
+						self.add_falling_piece(x, y, bubble_id)
 			
 	def insert_row(self, row_nr=0):
-		for c in range(self.columns):
-			bubble_id = randint(1, self.max_rand_id)
-			self.add_falling_piece(c, row_nr*self.piece_h, bubble_id)
+		for c in range(self.columns):			
+			self.add_falling_piece(c, row_nr)
 			
 	def set_piece(self, x, y, piece_id):
 		self._board[x][y] = piece_id
@@ -104,13 +118,15 @@ class PlayBoard:
 	def get_piece(self, x, y):
 		return self._board[x][y]	
 			
-	def add_falling_piece(self, column, ypos, bubble_id):
+	def add_falling_piece(self, column, row, bubble_id=None):
 		""" 
 		To ensure collisions are detected from bottom to top, 
 		insert items ordered by ypos
 		"""
-		board_x = column
-		board_y = ypos/self.piece_h
+		if not bubble_id:
+			bubble_id = randint(1, self.max_rand_id)
+		ypos = row*self.piece_h
+		board_x, board_y = column, row
 		if self._board[board_x][board_y] != 0:
 			raise Exception("Overwriting piece!?")
 		insert_pos = len(self.falling_pieces)
@@ -143,3 +159,38 @@ class PlayBoard:
 				piece[0] = -1 # Mark to delete 				
 		# Remove deleted pieces
 		self.falling_pieces = [piece for piece in self.falling_pieces if piece[0]<>-1]
+
+	def set_surfaces(self, surfaces):	
+		for surface in surfaces:
+			surface = pygame.transform.scale(surface, (self.piece_w, self.piece_h))
+			mini_surface = pygame.transform.scale(surface, (self.piece_w/2, self.piece_h/2))
+			self.surfaces.append(surface)
+			self.mini_surfaces.append(mini_surface)
+			
+	def get_board_pos(self, (x, y)):
+		board_x = (x-self.h_border)/self.piece_w
+		board_y = (y-self.header_height)/self.piece_h	
+		return board_x, board_y
+
+	def draw(self, screen):
+		
+		# Draw popping pieces
+		for pop_count, (c, r), piece_id in self.popping_pieces:
+			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
+			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.mini_h/2)
+			screen.blit(self.mini_surfaces[piece_id-1], (pos_x, pos_y))
+			
+		# Draw falling pieces
+		for c, ypos, piece_id in self.falling_pieces:
+			pos = (self.h_border+(c*self.piece_w), self.header_height+ypos)
+			screen.blit(self.surfaces[piece_id-1], pos)
+			
+		# Draw static pieces
+		for c in range(self.columns):
+			for r in range(self.rows):
+				piece_id = self.get_piece(c, r)
+				if piece_id != 0:									
+					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
+					screen.blit(self.surfaces[piece_id-1], pos)
+		
+

@@ -1,1 +1,1 @@
-{"layout": "external", "orientation": "portrait", "package": "org.osgameseed.org.games.popzi", "include_pil": false, "name": "Popzi", "icon_name": "Popzi", "version": "0.1", "permissions": [], "include_sqlite": false, "numeric_version": "1"}
+{"layout": "external", "orientation": "portrait", "package": "org.osgameseed.org.games.popzi", "include_pil": false, "name": "Popzi", "icon_name": "Popzi", "version": "0.2", "permissions": [], "include_sqlite": false, "numeric_version": "2"}

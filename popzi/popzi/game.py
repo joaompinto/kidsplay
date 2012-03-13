@@ -22,28 +22,28 @@
 import time
 import string
 import random
+from random import randint
 import os
 from datetime import date
-from os.path import expanduser, exists, isdir
-
-from playboard import PlayBoard
-
-# PyGame Constants
-from os.path import join
+from os.path import join, expanduser, exists, isdir
 import pygame
 from pygame.locals import *
 from pygame.color import THECOLORS
 from pygame.gfxdraw import box, rectangle, filled_circle
-from popzi.buttons import Button
-import popzi.resources as resources
+
+from buttons import Button
+import resources as resources
 from resources import get_resource
+from playboard import PlayBoard
 
 try:
-    import pygame.mixer as mixer
+	import android
+	import android.mixer as mixer
+	ANDROID = True
 except ImportError:
-    import android.mixer as mixer
-import random 
-
+	ANDROID = None		
+	import pygame.mixer as mixer
+  
 INSERT_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
 POPPING_EVENT = pygame.USEREVENT + 3
@@ -56,27 +56,19 @@ FALLING_INTERVAL = 33
 POPPING_INTERVAL = 33
 
 resources.DATA_DIR = "/usr/share/popzi"
-
-try:
-    import android
-    ANDROID = True
-except ImportError:
-    ANDROID = None		
     
 class Game:
+	COLUMNS = 10
+	ROWS = 16
+
+	# Top header for score
 	header_height = 60
-	columns = 10
-	rows = 20	
-	# Dimension for the "mini" pieces, mini pieces are shown when
-	# a piece is popping up.
-	mini_w = mini_h = 16	
 	
 	# List of bubles being poped (count, position, piece_id)
-	theme = "fruits"
+	theme = "fruits"	
 	
 	def __init__(self):
 		random.seed()
-		#self.playboard.ramdom_rows(5)	
 		
 	def init(self):
 		if not ANDROID:
@@ -106,17 +98,12 @@ class Game:
 		self.score_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 25)
 		self.completed_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 40)
 		
-		self.start_button = Button("Start game")		
+		self.start_button = Button("Start game")				
 		self.themes_button = Button("Select theme")
 		
-		# Dimension for the pieces
-		horizontal_size = self.screen.get_width()/10
-		vertical_size = (self.screen.get_height()-self.header_height)/20
-		self.piece_w = self.piece_h = vertical_size if vertical_size < horizontal_size else horizontal_size
-		self.playboard = PlayBoard(self.columns, self.rows, self.piece_w, self.piece_h)
-		self.h_border = (self.screen.get_width()-(self.piece_w*10))/2
-		if self.h_border < 0: self.h_border = 0
-		
+		self.playboard = PlayBoard(screen, 
+				self.COLUMNS, self.ROWS, header_height=self.header_height)
+				
 		self._read_theme_config()
 		
 	def _read_theme_config(self):
@@ -231,8 +218,8 @@ class Game:
 					if self.themes_button.is_pressed(mouse_pos):
 						self._themes_menu()						
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-					return False							
-			screen.blit(self.background, (0,0))							
+					return False										
+			screen.blit(self.background, (0, 0))
 			screen.blit(self.start_button.image, self.start_button.rect)
 			screen.blit(self.themes_button.image, self.themes_button.rect)
 			pygame.display.flip()
@@ -243,7 +230,7 @@ class Game:
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(get_resource(fn))							
 		self.background = pygame.transform.scale(background, (WINSIZE))
-		self.piece_surfaces,  self.mini_piece_surfaces = self._load_pieces()
+		self.playboard.set_surfaces(self._load_pieces())
 		
 		
 	def _themes_menu(self):
@@ -309,15 +296,14 @@ class Game:
 						self._start_level()
 					return True					
 				x,y = e.pos
-				board_x = (x-self.h_border)/self.piece_w
-				board_y = (y-self.header_height)/self.piece_h	
+				board_x, board_y = self.playboard.get_board_pos(e.pos)
 				if board_x < 0 or board_y < 0 or \
-					board_x > self.columns-1 or board_y > self.rows-1 :
+					board_x > self.COLUMNS-1 or board_y > self.ROWS-1 :
 					board_x = board_y = None
 				else:				
 					matching_group = playboard.get_same_adjacent(board_x, board_y)
 					matching_count = len(matching_group)
-					if matching_count > 1:
+					if matching_count > 1:						
 						self.pop_sound.play()
 						# Update score
 						score = matching_count
@@ -340,6 +326,16 @@ class Game:
 							self.level_score = self.level_score_goal	
 							self.is_level_complete = True
 							self.level_complete_time = time.clock()
+					else:
+						# Penalize massive touchers, drop on touch
+						candidate_pos = []
+						for c in range(self.playboard.columns):
+							# If there is a piece on the first row the game is over
+							if self.playboard.get_piece(c, 0) == 0:	
+								candidate_pos.append(c)
+						if candidate_pos:
+							c = randint(0, self.playboard.columns-1)
+							playboard.add_falling_piece(c, 0)						
 			elif e.type == INSERT_ROW_EVENT:
 				for c in range(self.playboard.columns):
 					# If there is a piece on the first row the game is over
@@ -363,7 +359,7 @@ class Game:
 								
 	def _draw(self):
 		screen = self.screen
-		screen.blit(self.background, (0,0))
+		screen.blit(self.background, (0,0))		
 
 		# Score text
 		text = self.score_font.render(' Score: %d ' % self.score, True, 
@@ -384,26 +380,10 @@ class Game:
 		rect = pygame.Rect(20, 5+text.get_height(), filled, 20)
 		screen.fill(THECOLORS["white"], rect, special_flags=0)
 		rectangle(screen, rect, THECOLORS["white"])
-								
-		# Draw popping pieces
-		for pop_count, (c, r), piece_id in self.popping_pieces:
-			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.mini_w/2)
-			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.mini_h/2)
-			screen.blit(self.mini_piece_surfaces[piece_id-1], (pos_x, pos_y))
-			
-		# Draw falling pieces
-		for c, ypos, piece_id in self.playboard.falling_pieces:
-			pos = (self.h_border+(c*self.piece_w), self.header_height+ypos)
-			screen.blit(self.piece_surfaces[piece_id-1], pos)
 
 		# Draw the pieces
-		for c in range(self.playboard.columns):
-			for r in range(self.playboard.rows):
-				piece_id = self.playboard.get_piece(c, r)
-				if piece_id != 0:
-					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
-					screen.blit(self.piece_surfaces[piece_id-1], pos)
-					
+		self.playboard.draw(screen)
+							
 		# Game over label when required
 		if self.is_game_over:
 			text = self.score_font.render(' GAME OVER ', True, THECOLORS["yellow"], THECOLORS["red"])		
@@ -436,14 +416,11 @@ class Game:
 		pygame.display.flip()
 
 	def _load_pieces(self):
-		""" Load pieces image files """
-		mini_pieces = []
+		""" Load pieces image files """		
 		pieces = []
 		for n in range(5):
 			fn = join('gfx', 'themes', self.theme, 'piece-%d.png' % (n+1))
 			piece = pygame.image.load(get_resource(fn))
-			piece = pygame.transform.scale(piece, (self.piece_w, self.piece_h))
-			pieces.append(piece)
-			mini_pieces.append(pygame.transform.scale(piece, (self.mini_w, self.mini_h)))
+			pieces.append(piece)			
 			
-		return pieces, mini_pieces
+		return pieces
