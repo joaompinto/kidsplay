@@ -230,7 +230,8 @@ class Game:
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(get_resource(fn))							
 		self.background = pygame.transform.scale(background, (WINSIZE))
-		self.playboard.set_surfaces(self._load_pieces())
+		surfaces = self._load_pieces()
+		self.playboard.set_surfaces(surfaces)
 		
 		
 	def _themes_menu(self):
@@ -334,8 +335,8 @@ class Game:
 							if self.playboard.get_piece(c, 0) == 0:	
 								candidate_pos.append(c)
 						if candidate_pos:
-							c = randint(0, self.playboard.columns-1)
-							playboard.add_falling_piece(c, 0)						
+							c = randint(0, len(candidate_pos)-1)
+							playboard.add_falling_piece(candidate_pos[c], 0)
 			elif e.type == INSERT_ROW_EVENT:
 				for c in range(self.playboard.columns):
 					# If there is a piece on the first row the game is over

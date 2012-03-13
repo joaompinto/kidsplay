@@ -161,6 +161,7 @@ class PlayBoard:
 		self.falling_pieces = [piece for piece in self.falling_pieces if piece[0]<>-1]
 
 	def set_surfaces(self, surfaces):	
+		self.surfaces = []
 		for surface in surfaces:
 			surface = pygame.transform.scale(surface, (self.piece_w, self.piece_h))
 			mini_surface = pygame.transform.scale(surface, (self.piece_w/2, self.piece_h/2))
