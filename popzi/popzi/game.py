@@ -54,6 +54,7 @@ TARGET_FPS = 30
 FALLING_SPEED = 10
 FALLING_INTERVAL = 33
 
+DEBUG = False
 resources.DATA_DIR = "/usr/share/popzi"
     
 class Game:
@@ -68,13 +69,16 @@ class Game:
 	
 	def __init__(self):
 		random.seed()
+		self.draw_count = 0
 		
 	def init(self):
+		flags = 0
 		if not ANDROID:
 			os.environ['SDL_VIDEO_CENTERED'] = '1'
 			WINSIZE = 480, 800
 		else:
 			WINSIZE = 0, 0
+			flags |= pygame.FULLSCREEN
 		pygame.init()	
 		if not ANDROID:
 			mixer.init()	
@@ -88,7 +92,7 @@ class Game:
 		if not ANDROID:
 			self.icon = pygame.image.load(get_resource('android-icon.png'))
 			pygame.display.set_icon(self.icon)
-		screen = self.screen = pygame.display.set_mode(WINSIZE)
+		screen = self.screen = pygame.display.set_mode(WINSIZE, flags)
 		self.width, self.height = screen.get_width(), screen.get_height()
 		pygame.display.set_caption('Popzi')
 					
@@ -99,11 +103,12 @@ class Game:
 		
 		self.start_button = Button("Start game")				
 		self.themes_button = Button("Select theme")
-		
+						
 		self.playboard = PlayBoard(screen, 
-				self.COLUMNS, self.ROWS, header_height=self.header_height)
-				
+				self.COLUMNS, self.ROWS, self.header_height)
+		
 		self._read_theme_config()
+		
 		
 	def _read_theme_config(self):
 		fname = self._config_file('theme.config')
@@ -125,9 +130,10 @@ class Game:
 		self.is_game_over = False
 		self.drop_row_interval = 10
 		self.level = 1
-		self._start_level()
+		self._start_level(DEBUG)		
 		
-	def _start_level(self):		
+		
+	def _start_level(self, debug=False):		
 		self.level_score = self.remaining_score
 		# Keep remaining score
 		self.is_level_complete = False
@@ -144,10 +150,16 @@ class Game:
 		
 		# Restart board
 		self.playboard.start()
-		for row in range(0, starting_rows):
-			self.playboard.insert_row(row)
+		if debug:
+			for c in range(self.COLUMNS):
+				for r in range(self.ROWS):
+					self.playboard.set_piece((c, r), (c % 5)+1)
+		else:
+			for row in range(0, starting_rows):
+				self.playboard.insert_row(row)
 		# Start timers
-		pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
+		if not debug:
+			pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
 		pygame.time.set_timer(FALLING_MOVE_EVENT, FALLING_INTERVAL)
 		
 			
@@ -229,8 +241,7 @@ class Game:
 		background = pygame.image.load(get_resource(fn))							
 		self.background = pygame.transform.scale(background, (WINSIZE))
 		surfaces = self._load_pieces()
-		self.playboard.set_surfaces(surfaces)
-		
+		self.playboard.set_surfaces(surfaces)		
 		
 	def _themes_menu(self):
 		screen = self.screen
@@ -353,6 +364,9 @@ class Game:
 		return True
 								
 	def _draw(self):
+		self.draw_count += 1
+		if self.draw_count == 1:
+			self.first_draw = time.clock()
 		screen = self.screen
 		screen.blit(self.background, (0,0))		
 
@@ -375,9 +389,8 @@ class Game:
 		rect = pygame.Rect(20, 5+text.get_height(), filled, 20)
 		screen.fill(THECOLORS["white"], rect, special_flags=0)
 		rectangle(screen, rect, THECOLORS["white"])
-
-		# Draw the pieces
-		self.playboard.draw(screen)
+	
+		self.playboard.draw(screen)		
 							
 		# Game over label when required
 		if self.is_game_over:
@@ -409,6 +422,9 @@ class Game:
 			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.height/2-text.get_height()/2))
 					
 		pygame.display.flip()
+		if DEBUG and self.draw_count == 100:
+			print "Playboard draw CPU time=", time.clock()-self.first_draw
+			self.draw_count = 0
 
 	def _load_pieces(self):
 		""" Load pieces image files """		

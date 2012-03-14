@@ -196,7 +196,6 @@ class PlayBoard:
 			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.piece_w/4)
 			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.piece_w/4)
 			screen.blit(self.mini_surfaces[piece_id-1], (pos_x, pos_y))
-			print "Drawn mini piece"
 			
 		# Draw falling pieces
 		for c, ypos, piece_id in self.falling_pieces:
