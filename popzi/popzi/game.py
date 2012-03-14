@@ -131,6 +131,7 @@ class Game:
 		self.drop_row_interval = 10
 		self.level = 1
 		self._start_level(DEBUG)		
+		self.screen.fill((0,0,0 ))
 		
 		
 	def _start_level(self, debug=False):		
@@ -239,9 +240,10 @@ class Game:
 		WINSIZE = self.width, self.height
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(get_resource(fn))							
-		self.background = pygame.transform.scale(background, (WINSIZE))
+		self.background = pygame.transform.scale(background, (WINSIZE))		
 		surfaces = self._load_pieces()
-		self.playboard.set_surfaces(surfaces)		
+		self.playboard.set_surfaces(surfaces)
+		self.playboard.set_background(background)
 		
 	def _themes_menu(self):
 		screen = self.screen
@@ -302,7 +304,7 @@ class Game:
 					return True
 				# Level completed only accepts touch after a 2 seconds wait
 				elif self.is_level_complete:
-					if time.clock() - self.level_complete_time > 2:					
+					if time.time() - self.level_complete_time > 2:					
 						self.level += 1
 						self._start_level()
 					return True					
@@ -336,7 +338,7 @@ class Game:
 							pygame.time.set_timer(FALLING_MOVE_EVENT, 0)
 							self.level_score = self.level_score_goal	
 							self.is_level_complete = True
-							self.level_complete_time = time.clock()
+							self.level_complete_time = time.time()
 					else:
 						# Penalize massive touchers, drop on touch
 						candidate_pos = []
@@ -367,8 +369,9 @@ class Game:
 		self.draw_count += 1
 		if self.draw_count == 1:
 			self.first_draw = time.clock()
-		screen = self.screen
-		screen.blit(self.background, (0,0))		
+			
+		screen = self.screen	
+		self.playboard.draw(screen)		
 
 		# Score text
 		text = self.score_font.render(' Score: %d ' % self.score, True, 
@@ -380,24 +383,24 @@ class Game:
 			THECOLORS["white"], THECOLORS["black"])		
 		screen.blit(text, (self.width-text.get_width()-5,0))
 		
-		# Level progress rectangle
-		rect = pygame.Rect(20, 5+text.get_height(), self.width-40, 20)		
+		# Level progress box
+		rect = pygame.Rect(20, 3+text.get_height(), self.width-40, 20)						
 		rectangle(screen, rect, THECOLORS["white"])
 		
 		# Level progress indicator (fill)
 		filled = (float(self.level_score)/self.level_score_goal)*(self.width-40)
-		rect = pygame.Rect(20, 5+text.get_height(), filled, 20)
-		screen.fill(THECOLORS["white"], rect, special_flags=0)
+		white_rect = pygame.Rect(20, 3+text.get_height(), filled, 20)
+		black_rect = pygame.Rect(20+filled, 3+text.get_height(), self.width-40-filled, 20)
+		screen.fill(THECOLORS["white"], white_rect)
+		screen.fill(THECOLORS["black"], black_rect)
 		rectangle(screen, rect, THECOLORS["white"])
-	
-		self.playboard.draw(screen)		
 							
 		# Game over label when required
 		if self.is_game_over:
 			text = self.score_font.render(' GAME OVER ', True, THECOLORS["yellow"], THECOLORS["red"])		
 			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.header_height + 20))
 
-			#print the high score table
+			#high score table
 			i = 0
 			ypos = self.header_height + 10 + text.get_height() + 30
 			for score in self._high_scores:
@@ -415,13 +418,13 @@ class Game:
 			ypos += 20
 			self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), ypos)
 			screen.blit(self.start_button.image, self.start_button.rect)
-				
-			
+							
 		if self.is_level_complete:
 			text = self.completed_font.render(' LEVEL COMPLETED ', True, THECOLORS["blue"], THECOLORS["yellow"])		
 			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.height/2-text.get_height()/2))
-					
+			
 		pygame.display.flip()
+		
 		if DEBUG and self.draw_count == 100:
 			print "Playboard draw CPU time=", time.clock()-self.first_draw
 			self.draw_count = 0

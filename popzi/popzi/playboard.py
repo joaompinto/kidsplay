@@ -43,18 +43,22 @@ class PlayBoard:
 		self.header_height = header_height
 		
 		self.screen = screen
-		self.width, self.height = screen.get_width(), screen.get_height()
+		width, height = screen.get_width(), screen.get_height()
 		
 		# Dimension for the pieces		
-		horizontal_size = self.width / self.columns
-		vertical_size = (self.height-self.header_height) / self.rows
+		horizontal_size = width / self.columns
+		vertical_size = (height-self.header_height) / self.rows
 		self.piece_w = self.piece_h = vertical_size if vertical_size < horizontal_size else horizontal_size
-		self.h_border = (self.width-(self.piece_w*self.columns))/2
+		self.h_border = (width-(self.piece_w*self.columns))/2
 		if self.h_border < 0: 
 			self.h_border = 0
 		self.surfaces  = []
 		self.mini_surfaces  = []
-		
+		self.width = self.piece_w * self.columns
+		self.height = self.piece_h * self.rows
+		self.my_surface = pygame.Surface((self.width, self.height))
+		self.tmp_surface = pygame.Surface((self.width, self.height))
+		self.needs_static_redraw = True		
 		
 	def start(self):
 		for c in range(self.columns):			
@@ -64,6 +68,7 @@ class PlayBoard:
 		self.falling_pieces = []
 		self.popping_pieces = []
 		pygame.time.set_timer(POPPING_EVENT, POPPING_INTERVAL)
+
 
 	def add_popping(self, (data)):
 		self.popping_pieces.append(data)
@@ -118,6 +123,7 @@ class PlayBoard:
 			
 	def set_piece(self, x, y, piece_id):
 		self._board[x][y] = piece_id
+		self.needs_static_redraw = True
 		
 	def get_piece(self, x, y):
 		return self._board[x][y]	
@@ -166,7 +172,7 @@ class PlayBoard:
 				piece[0] = -1 # Mark to delete
 			# if found a ground piece
 			elif self._board[board_x][board_y+1]<>0: # found piece
-				self.set_piece(board_x, board_y, bubble_id, bubble_id)
+				self.set_piece(board_x, board_y, bubble_id)
 				piece[0] = -1 # Mark to delete 				
 		# Remove deleted pieces
 		self.falling_pieces = [piece for piece in self.falling_pieces if piece[0]<>-1]
@@ -185,26 +191,35 @@ class PlayBoard:
 		board_y = (y-self.header_height)/self.piece_h	
 		return board_x, board_y
 
-	def draw(self, screen):
-
-		# Draw static pieces
-		for c in range(self.columns):
-			for r in range(self.rows):
-				piece_id = self.get_piece(c, r)
-				if piece_id != 0:									
-					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
-					screen.blit(self.surfaces[piece_id-1], pos)
+	def set_background(self, surface):
+		self.background = surface.subsurface(self.h_border, self.header_height+20, self.width, self.height).copy()
+		
+	def draw(self, screen):			
+		my_surface, tmp_surface = self.my_surface, self.tmp_surface
+		if self.needs_static_redraw:
+			my_surface.blit(self.background, (0,0))
+			# Draw static pieces
+			for c in range(self.columns):
+				for r in range(self.rows):
+					piece_id = self.get_piece(c, r)
+					if piece_id != 0:									
+						pos = (c*self.piece_w, r*self.piece_h)
+						my_surface.blit(self.surfaces[piece_id-1], pos)
+			self.needs_static_redraw = False
+		tmp_surface.blit(my_surface, (0,0))
 		
 		# Draw popping pieces
 		for pop_count, (c, r), piece_id in self.popping_pieces:
-			pos_x = self.h_border+(c*self.piece_w)+(self.piece_w/2)-(self.piece_w/4)
-			pos_y = (self.header_height+r*self.piece_h)+(self.piece_h/2)-(self.piece_w/4)
-			screen.blit(self.mini_surfaces[piece_id-1], (pos_x, pos_y))
+			pos_x = (c*self.piece_w)+(self.piece_w/2)-(self.piece_w/4)
+			pos_y = (r*self.piece_h)+(self.piece_h/2)-(self.piece_w/4)
+			tmp_surface.blit(self.mini_surfaces[piece_id-1], (pos_x, pos_y))
 			
 		# Draw falling pieces
 		for c, ypos, piece_id in self.falling_pieces:
-			pos = (self.h_border+(c*self.piece_w), self.header_height+ypos)
-			screen.blit(self.surfaces[piece_id-1], pos)
+			pos = (c*self.piece_w, ypos)
+			tmp_surface.blit(self.surfaces[piece_id-1], pos)
+		
+		screen.blit(tmp_surface, (self.h_border, self.header_height))
 			
 		
 
