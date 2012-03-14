@@ -18,12 +18,15 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.    
 """
-
+import sys
+import popzi.game
 from popzi.game import Game
 
 
 def main():
 	game = Game()
+	if len(sys.argv)>1 and sys.argv[1] == '-debug':
+		popzi.game.DEBUG = True
 	game.init()
 	game.menu()
 

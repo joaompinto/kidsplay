@@ -153,7 +153,7 @@ class Game:
 		if debug:
 			for c in range(self.COLUMNS):
 				for r in range(self.ROWS):
-					self.playboard.set_piece((c, r), (c % 5)+1)
+					self.playboard.set_piece(c, r, (c % 5)+1)
 		else:
 			for row in range(0, starting_rows):
 				self.playboard.insert_row(row)

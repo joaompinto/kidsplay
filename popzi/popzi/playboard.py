@@ -59,7 +59,8 @@ class PlayBoard:
 	def start(self):
 		for c in range(self.columns):			
 			for r in range(self.rows):			
-				self._board[c][r] = 0
+				self.set_piece(c, r, 0)
+								
 		self.falling_pieces = []
 		self.popping_pieces = []
 		pygame.time.set_timer(POPPING_EVENT, POPPING_INTERVAL)
@@ -67,13 +68,7 @@ class PlayBoard:
 	def add_popping(self, (data)):
 		self.popping_pieces.append(data)
 		
-	def ramdom_rows(self, nr_rows):
-		""" Assign random values to the specified nr of bottom rows """
-		for c in range(self.columns):			
-			for r in range(nr_rows):			
-				bubble_id = randint(1, self.max_rand_id)
-				self._board[self.columns-c-1][self.rows-r-1] = bubble_id
-	
+					
 	def get_same_adjacent(self, x, y, match_id=None):
 		""" return list of adjance pieces starting a x,y with the same id """
 		# Check for board boundaries
@@ -100,8 +95,9 @@ class PlayBoard:
 
 	def remove(self, aList):
 		""" Remove list of pieces"""		
-		for (c,r) in aList:			
-			self._board[c][r] = 0
+		for (c,r) in aList:
+			self.set_piece(c, r, 0)
+						
 		
 	def remove_vertical_gaps(self):
 		""" Remove vertical gaps by setting pieces to falling """
@@ -112,8 +108,8 @@ class PlayBoard:
 				if self._board[x][y] == 0:
 					falling = True
 				elif falling:
-						bubble_id = self._board[x][y]	
-						self._board[x][y] = 0
+						bubble_id = self._board[x][y]
+						self.set_piece(x, y, 0)
 						self.add_falling_piece(x, y, bubble_id)
 			
 	def insert_row(self, row_nr=0):
@@ -165,12 +161,12 @@ class PlayBoard:
 			board_x = column
 			board_y = ypos/self.piece_h
 			# if hit ground 
-			if board_y == self.rows - 1: 
-				self._board[board_x][board_y] = bubble_id
+			if board_y == self.rows - 1: 				
+				self.set_piece(board_x, board_y, bubble_id)
 				piece[0] = -1 # Mark to delete
 			# if found a ground piece
 			elif self._board[board_x][board_y+1]<>0: # found piece
-				self._board[board_x][board_y] = bubble_id
+				self.set_piece(board_x, board_y, bubble_id, bubble_id)
 				piece[0] = -1 # Mark to delete 				
 		# Remove deleted pieces
 		self.falling_pieces = [piece for piece in self.falling_pieces if piece[0]<>-1]
@@ -190,6 +186,14 @@ class PlayBoard:
 		return board_x, board_y
 
 	def draw(self, screen):
+
+		# Draw static pieces
+		for c in range(self.columns):
+			for r in range(self.rows):
+				piece_id = self.get_piece(c, r)
+				if piece_id != 0:									
+					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
+					screen.blit(self.surfaces[piece_id-1], pos)
 		
 		# Draw popping pieces
 		for pop_count, (c, r), piece_id in self.popping_pieces:
@@ -202,12 +206,5 @@ class PlayBoard:
 			pos = (self.h_border+(c*self.piece_w), self.header_height+ypos)
 			screen.blit(self.surfaces[piece_id-1], pos)
 			
-		# Draw static pieces
-		for c in range(self.columns):
-			for r in range(self.rows):
-				piece_id = self.get_piece(c, r)
-				if piece_id != 0:									
-					pos = (self.h_border+(c*self.piece_w), self.header_height+(r*self.piece_h))
-					screen.blit(self.surfaces[piece_id-1], pos)
 		
 
