@@ -36,14 +36,20 @@ import resources as resources
 from resources import get_resource
 from playboard import PlayBoard
 
-try:
-	import android
-	import android.mixer as mixer
-	ANDROID = True
-except ImportError:
-	ANDROID = None		
-	import pygame.mixer as mixer
-  
+ANDROID = USE_MIXER = PYTHON4ANDROID = False
+
+if os.getenv('ANDROID_APP_PATH'):
+	PYTHON4ANDROID = True
+else:
+	USE_MIXER = True
+	try:
+		import android	
+		import android.mixer as mixer
+		ANDROID = True
+	except ImportError:
+		ANDROID = None	
+		import pygame.mixer as mixer
+	
 INSERT_ROW_EVENT = pygame.USEREVENT + 1
 FALLING_MOVE_EVENT = pygame.USEREVENT + 2
 
@@ -80,8 +86,8 @@ class Game:
 			WINSIZE = 0, 0
 			flags |= pygame.FULLSCREEN
 		pygame.init()	
-		if not ANDROID:
-			mixer.init()	
+		if USE_MIXER:
+			mixer.init()
 		
 		# Map the back button to the escape key.
 		if ANDROID:
@@ -89,14 +95,15 @@ class Game:
 			android.map_key(android.KEYCODE_BACK, pygame.K_ESCAPE)
 
 		self.clock = pygame.time.Clock()			
-		if not ANDROID:
+		if not (ANDROID or PYTHON4ANDROID):
 			self.icon = pygame.image.load(get_resource('android-icon.png'))
 			pygame.display.set_icon(self.icon)
 		screen = self.screen = pygame.display.set_mode(WINSIZE, flags)
 		self.width, self.height = screen.get_width(), screen.get_height()
 		pygame.display.set_caption('Popzi')
-					
-		self.pop_sound = mixer.Sound(get_resource("sfx/pop.ogg"))
+
+		if USE_MIXER:
+			self.pop_sound = mixer.Sound(get_resource("sfx/pop.ogg"))
 		
 		self.score_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 25)
 		self.completed_font = pygame.font.Font(get_resource(join("fonts", "FreeSans.ttf")), 40)
@@ -157,7 +164,7 @@ class Game:
 					self.playboard.set_piece(c, r, (c % 5)+1)
 		else:
 			for row in range(0, starting_rows):
-				self.playboard.insert_row(row)
+				self.playboard.insert_row(row, self.level > 2 )
 		# Start timers
 		if not debug:
 			pygame.time.set_timer(INSERT_ROW_EVENT, self.drop_row_interval*1000)
@@ -313,11 +320,16 @@ class Game:
 				if board_x < 0 or board_y < 0 or \
 					board_x > self.COLUMNS-1 or board_y > self.ROWS-1 :
 					board_x = board_y = None
-				else:				
-					matching_group = playboard.get_same_adjacent(board_x, board_y)
+				else:						
+					piece_id = self.playboard.get_piece(board_x, board_y)
+					if piece_id == -1: # Zap
+						matching_group = self.playboard.get_zap_group(board_x, board_y, [])
+					else:
+						matching_group = playboard.get_same_adjacent(board_x, board_y)
 					matching_count = len(matching_group)
-					if matching_count > 1:						
-						self.pop_sound.play()
+					if matching_count > 1:
+						if USE_MIXER:
+							self.pop_sound.play()
 						# Update score
 						score = matching_count
 						if matching_count > 4:
@@ -341,14 +353,15 @@ class Game:
 							self.level_complete_time = time.time()
 					else:
 						# Penalize massive touchers, drop on touch
-						candidate_pos = []
-						for c in range(self.playboard.columns):
+						#candidate_pos = []
+						#for c in range(self.playboard.columns):
 							# If there is a piece on the first row the game is over
-							if self.playboard.get_piece(c, 0) == 0:	
-								candidate_pos.append(c)
-						if candidate_pos:
-							c = randint(0, len(candidate_pos)-1)
-							playboard.add_falling_piece(candidate_pos[c], 0)
+						#	if self.playboard.get_piece(c, 0) == 0:	
+						#		candidate_pos.append(c)
+						#if candidate_pos:
+						#	c = randint(0, len(candidate_pos)-1)
+						if self.playboard.get_piece(board_x, 0) == 0:
+							playboard.add_falling_piece(board_x, 0)
 			elif e.type == INSERT_ROW_EVENT:
 				for c in range(self.playboard.columns):
 					# If there is a piece on the first row the game is over
@@ -359,7 +372,7 @@ class Game:
 						self._check_high_scores()
 						break
 				if not self.is_game_over:
-					self.playboard.insert_row()
+					self.playboard.insert_row(with_special=self.level > 2)
 			elif e.type == FALLING_MOVE_EVENT:
 				touch_down = self.playboard.falling_move(FALLING_SPEED)
 				# Decrease visible time count for popping pieces

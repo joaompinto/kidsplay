@@ -21,6 +21,7 @@
 
 from random import randint
 import pygame
+from resources import get_resource
 
 
 POPPING_INTERVAL = 33
@@ -60,6 +61,9 @@ class PlayBoard:
 		self.tmp_surface = pygame.Surface((self.width, self.height))
 		self.needs_static_redraw = True		
 		
+		surface  = pygame.image.load(get_resource('gfx/lightning.png'))
+		self.lighthing_surface = pygame.transform.scale(surface, (self.piece_w, self.piece_h))
+		
 	def start(self):
 		for c in range(self.columns):			
 			for r in range(self.rows):			
@@ -73,7 +77,30 @@ class PlayBoard:
 	def add_popping(self, (data)):
 		self.popping_pieces.append(data)
 		
-					
+	def get_zap_group(self, board_x, board_y, matching_group, u=0, d=0, r=0, l=0):
+		""" search for objects in the specified direction path """
+		
+		if board_x < 0 or board_x > self.columns-1 or \
+			board_y < 0 or board_y > self.rows-1:
+				return []
+		if(board_x, board_y) in matching_group:
+			return []						
+		piece_id = self.get_piece(board_x, board_y)
+		if piece_id == 0:
+			return []
+		matching_group.append((board_x, board_y))
+		if piece_id == -1:
+			d=u=r=l=1
+		if d:
+			self.get_zap_group(board_x, board_y+1, matching_group, d=1)
+		if u:
+			self.get_zap_group(board_x, board_y-1, matching_group, u=1)
+		if l:
+			self.get_zap_group(board_x-1, board_y, matching_group, l=1)
+		if r:
+			self.get_zap_group(board_x+1, board_y, matching_group, r=1)
+		return matching_group
+		
 	def get_same_adjacent(self, x, y, match_id=None):
 		""" return list of adjance pieces starting a x,y with the same id """
 		# Check for board boundaries
@@ -117,9 +144,10 @@ class PlayBoard:
 						self.set_piece(x, y, 0)
 						self.add_falling_piece(x, y, bubble_id)
 			
-	def insert_row(self, row_nr=0):
+	def insert_row(self, row_nr=0, with_special=False):
 		for c in range(self.columns):			
-			self.add_falling_piece(c, row_nr)
+			piece_id = -1 if with_special and randint(0, 50) == 0 else None
+			self.add_falling_piece(c, row_nr, piece_id)
 			
 	def set_piece(self, x, y, piece_id):
 		self._board[x][y] = piece_id
@@ -197,14 +225,17 @@ class PlayBoard:
 	def draw(self, screen):			
 		my_surface, tmp_surface = self.my_surface, self.tmp_surface
 		if self.needs_static_redraw:
-			my_surface.blit(self.background, (0,0))
+			self.my_surface = my_surface = self.background.copy()
 			# Draw static pieces
 			for c in range(self.columns):
 				for r in range(self.rows):
 					piece_id = self.get_piece(c, r)
 					if piece_id != 0:									
 						pos = (c*self.piece_w, r*self.piece_h)
-						my_surface.blit(self.surfaces[piece_id-1], pos)
+						if piece_id == -1:
+							my_surface.blit(self.lighthing_surface, pos)
+						else:
+							my_surface.blit(self.surfaces[piece_id-1], pos)
 			self.needs_static_redraw = False
 		tmp_surface.blit(my_surface, (0,0))
 		
@@ -217,7 +248,10 @@ class PlayBoard:
 		# Draw falling pieces
 		for c, ypos, piece_id in self.falling_pieces:
 			pos = (c*self.piece_w, ypos)
-			tmp_surface.blit(self.surfaces[piece_id-1], pos)
+			if piece_id == -1:
+				tmp_surface.blit(self.lighthing_surface, pos)
+			else:
+				tmp_surface.blit(self.surfaces[piece_id-1], pos)
 		
 		screen.blit(tmp_surface, (self.h_border, self.header_height))
 			

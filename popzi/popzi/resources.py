@@ -35,4 +35,4 @@ def get_resource(resource_name):
 		if exists(potential_path):
 			return potential_path
 
-	raise Exception
+	raise Exception(potential_path+" not found")
