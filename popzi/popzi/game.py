@@ -137,9 +137,9 @@ class Game:
 		self.is_game_over = False
 		self.drop_row_interval = 10
 		self.level = 1
-		self._start_level(DEBUG)		
-		self.screen.fill((0,0,0 ))
-		
+		self._start_level(DEBUG)
+		self.screen.blit(self.background, (0, 0))
+
 		
 	def _start_level(self, debug=False):		
 		self.level_score = self.remaining_score
@@ -247,10 +247,10 @@ class Game:
 		WINSIZE = self.width, self.height
 		fn = join('gfx', 'themes', self.theme , 'background.jpg')
 		background = pygame.image.load(get_resource(fn))							
-		self.background = pygame.transform.scale(background, (WINSIZE))		
+		self.background = pygame.transform.scale(background, (WINSIZE))
 		surfaces = self._load_pieces()
 		self.playboard.set_surfaces(surfaces)
-		self.playboard.set_background(background)
+		self.playboard.set_background(self.background)
 		
 	def _themes_menu(self):
 		screen = self.screen
@@ -379,11 +379,12 @@ class Game:
 		return True
 								
 	def _draw(self):
+		screen = self.screen
 		self.draw_count += 1
+
 		if self.draw_count == 1:
 			self.first_draw = time.clock()
-			
-		screen = self.screen	
+
 		self.playboard.draw(screen)		
 
 		# Score text

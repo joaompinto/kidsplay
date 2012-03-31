@@ -220,7 +220,9 @@ class PlayBoard:
 		return board_x, board_y
 
 	def set_background(self, surface):
-		self.background = surface.subsurface(self.h_border, self.header_height+20, self.width, self.height).copy()
+		x, y = self.h_border, self.header_height
+		w, h = self.width, self.height
+		self.background = surface.subsurface(x, y, w, h).copy()
 		
 	def draw(self, screen):			
 		my_surface, tmp_surface = self.my_surface, self.tmp_surface
