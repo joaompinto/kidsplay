@@ -1,0 +1,12 @@
+
+[Desktop Entry]
+Encoding=UTF-8
+Name=Mazenum
+Comment=Find the path in the numbers maze
+Exec=mazenum
+Icon=mazenum-icon
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Categories=Game;ArcadeGame;
+Name[pt]=mazenum.desktop
