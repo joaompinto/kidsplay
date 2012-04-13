@@ -97,6 +97,7 @@ class Game:
 				self.COLUMNS, self.ROWS, self.header_height)
 		
 		self._read_theme_config()
+		self.is_game_over = False
 		
 		
 	def _read_theme_config(self):
@@ -110,21 +111,17 @@ class Game:
 		except IOError:
 			pass
 
-		self._set_theme()
-		
-			
-	def start(self):
-		self.level = 1
-		self.score = self.level_score = self.remaining_score = 0
+		self._set_theme()		
+					
+	def start(self, debug=False):
+		self.score = 0
 		self.is_game_over = False
-		self.drop_row_interval = 10
 		self.level = 1
 		self._start_level(DEBUG)
-		self.screen.blit(self.background, (0, 0))
-
 		
-	def start(self, debug=False):		
-		self.playboard.start()
+	def _start_level(self, debug=False):
+		self.playboard.start(self.level)
+		self.is_level_complete = False
 			
 	def _config_file(self, fname):
 		""" Return full filename for a config file based on the platform """
@@ -181,11 +178,11 @@ class Game:
 		self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 		self.themes_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), 100+(self.start_button.rect.height*2))		
 		action = None
-		while True:	
+		while True:			
 			for event in pygame.event.get():
 				if event.type == MOUSEBUTTONDOWN:	
 					mouse_pos = pygame.mouse.get_pos()
-					if self.start_button.is_pressed(mouse_pos):
+					if self.start_button.is_pressed(event.pos):
 						self.run()
 						self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 					if self.themes_button.is_pressed(mouse_pos):
@@ -257,9 +254,45 @@ class Game:
 		for e in events:	
 			if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
 				return False
-			#self.playboard.check_event(e)
+			elif e.type == MOUSEBUTTONDOWN:					
+				if self.is_level_complete:
+					if time.time() - self.level_complete_time > 2:					
+						self.level += 1
+						self._start_level()
+					return True					
+				elif self.is_game_over and e.type == MOUSEBUTTONDOWN:
+					if self.start_button.is_pressed(e.pos):
+						self.start()
+					return True
+				else:
+					self._on_touch(e.pos)
 									
 		return True
+
+	def _on_touch(self, pos):
+		""" A position was touched """
+		touch_x, touch_y = self.playboard.get_board_pos(pos)
+		# Revert last played ?
+		if (touch_x, touch_y) == self.playboard.get_last_pos() and \
+			len(self.playboard._play_path) > 1:
+				self.playboard.remove_last()
+				return			
+		current_x, current_y = self.playboard.get_last_pos()
+		
+		# Ignore touches which are not adjacent
+		if abs(touch_x - current_x) > 1 or abs(touch_y - current_y) > 1:
+			return 
+		current_value = self.playboard.get_piece(current_x, current_y)
+		touch_value = self.playboard.get_piece(touch_x, touch_y)
+		diff = touch_value - current_value if touch_value < 10 else touch_value
+		if not diff in (1, -8): # Ignore non consecutive sequence -8=1-9
+			return
+		if (touch_x, touch_y) in self.playboard.goals:
+			self.level_complete_time = time.time()
+			self.is_level_complete = True
+			return		
+		self.score += 1
+		self.playboard.place_at((touch_x, touch_y))
 		
 	def _draw(self):
 		screen = self.screen
@@ -271,14 +304,14 @@ class Game:
 		self.playboard.draw(screen)		
 
 		# Score text
-		#text = self.score_font.render(' Score: %d ' % self.score, True, 
-		#	THECOLORS["white"], THECOLORS["black"])		
-		#screen.blit(text, (10,0))
+		text = self.score_font.render(' Score: %d ' % self.score, True, 
+			THECOLORS["white"], THECOLORS["black"])		
+		screen.blit(text, (10,0))
 		
 		# Level text
-		#text = self.score_font.render(' Level: %d ' % self.level, True, 
-		#	THECOLORS["white"], THECOLORS["black"])		
-		#screen.blit(text, (self.width-text.get_width()-5,0))
+		text = self.score_font.render(' Level: %d ' % self.level, True, 
+			THECOLORS["white"], THECOLORS["black"])		
+		screen.blit(text, (self.width-text.get_width()-5,0))
 		
 		# Level progress box
 		#rect = pygame.Rect(20, 3+text.get_height(), self.width-40, 20)						
@@ -293,14 +326,14 @@ class Game:
 		#rectangle(screen, rect, THECOLORS["white"])
 							
 		# Game over label when required
-		#if self.is_game_over:
-		if False:			
+		if self.is_game_over:
 			text = self.score_font.render(' GAME OVER ', True, THECOLORS["yellow"], THECOLORS["red"])		
 			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.header_height + 20))
 
 			#high score table
 			i = 0
 			ypos = self.header_height + 10 + text.get_height() + 30
+			"""
 			for score in self._high_scores:
 				if i == self.score_pos:
 					fg_color = THECOLORS["black"]
@@ -313,13 +346,14 @@ class Game:
 				screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), ypos))
 				ypos += text.get_height()+10
 				i += 1
+			"""
 			ypos += 20
 			self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), ypos)
 			screen.blit(self.start_button.image, self.start_button.rect)
 							
-		#if self.is_level_complete:
-		#	text = self.completed_font.render(' LEVEL COMPLETED ', True, THECOLORS["blue"], THECOLORS["yellow"])		
-		#	screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.height/2-text.get_height()/2))
+		if self.is_level_complete:
+			text = self.completed_font.render(' LEVEL COMPLETED ', True, THECOLORS["blue"], THECOLORS["yellow"])		
+			screen.blit(text, ((screen.get_width()/2) - (text.get_width()/2), self.height/2-text.get_height()/2))
 			
 		pygame.display.flip()
 		
