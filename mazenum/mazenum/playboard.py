@@ -29,8 +29,8 @@ from os.path import join
 POPPING_INTERVAL = 33
 POPPING_EVENT = pygame.USEREVENT + 3
 
-PLAYED_COLOR = (30, 30, 30)
-PLAYED_BACKGROUND_COLOR = (0, 0, 30)
+PLAYED_COLOR = (100, 100, 100)
+PLAYED_BACKGROUND_COLOR = (0, 0, 100)
 
 class PlayBoard:
 	""" The playboard is a two dimensional data store for the game date 

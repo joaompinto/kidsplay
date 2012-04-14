@@ -123,7 +123,7 @@ class Game:
 		try:
 			with open(fname, 'r') as theme_config:											
 				config_theme = theme_config.read()
-				if isdir(join('gfx', 'themes', config_theme)):
+				if config_theme and isdir(join('gfx', 'themes', config_theme)):
 					self.theme = config_theme
 		except IOError:
 			pass
