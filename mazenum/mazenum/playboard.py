@@ -29,7 +29,7 @@ from os.path import join
 POPPING_INTERVAL = 33
 POPPING_EVENT = pygame.USEREVENT + 3
 
-PLAYED_COLOR = (100, 100, 100)
+PLAYED_COLOR = (0, 0, 0)
 PLAYED_BACKGROUND_COLOR = (0, 0, 100)
 
 class PlayBoard:
@@ -78,52 +78,54 @@ class PlayBoard:
 		self.set_piece((start_x, start_y), 1)
 		self._play_path = [(start_x, start_y)]
 		self.goals = []
-		self.make_sequence(7+level)
+		self.place_sequence(7+level)
 			
 	def set_piece(self, (x, y), piece_id):
 		self._board[x][y] = piece_id
 		self.needs_static_redraw = True
 		
-	def get_piece(self, x, y):
+	def get_piece(self, (x, y)):
 		return self._board[x][y]	
 			
-	def make_sequence(self, start_count):
-		""" Set a sequence in a random order with "count" pieces """		
-		start_path = True
-		count = start_count
+			
+	def is_in_bounds(self, position):
+		""" check if a given position is inside the playtable """
+		c, r = position
+		return not(c < 0 or r < 0 or c >= self.columns or r >= self.rows)
+	
+	def place_sequence(self, count):
+		""" Create a sequence of "count" consecutive numbers in 
+		a random direction """		
+		must_start_path = True
+		start_count = count
 		while count > 0:
-			if start_path:
+			# We need init data structures inside the loop because
+			# we may need to re-init when a deadlock is found
+			if must_start_path:
 				count = start_count # need on deadlock restart
 				placed = [self._play_path[0]]
 				x, y = self._play_path[0]
-				i = 2			
-				start_path = False
+				current_nr = 2			
+				must_start_path = False
 				dead_lock = False
-			out_of_bounds = True
-			find_way_count = 0
-			while out_of_bounds:
-				find_way_count += 1
-				move_x = randint(-1, 1)
-				move_y = randint(-1, 1)
-				new_pos = (x + move_x, y + move_y)
-				out_of_bounds = x + move_x < 0 or \
-					y + move_y < 0 or \
-					x + move_x > self.columns-1 or \
-					y + move_y > self.rows-1 or \
-					new_pos in placed
-				if find_way_count > 50: # Avoid deadlock
-					dead_lock = True
-					start_path = True					
-					break
-			if dead_lock:
-				continue
-			placed.append(new_pos)
-			x,y = new_pos
-			self.set_piece(new_pos, i)
-			i += 1
-			if i == 10:
-				i=1
-			count -= 1	
+			possible_pos = [] # list of possible positions for next piece
+			for delta_c in range(-1, 2):
+				for delta_r in range(-1, 2):
+					pos = (x + delta_c, y + delta_r)
+					if pos not in placed and self.is_in_bounds(pos):
+						possible_pos.append(pos)
+			if len(possible_pos) == 0: # Deadlock
+				dead__lock = True
+			else:
+				i = randint(0, len(possible_pos) - 1)
+				new_pos = possible_pos[i]
+				self.set_piece(new_pos, current_nr)
+				placed.append(new_pos)				
+				x,y = new_pos				
+				current_nr += 1
+				if current_nr == 10:
+					current_nr = 1 
+				count -= 1	
 		self.goals.append(placed[-1])			
 		
 	def check_event(self, event):		
@@ -163,11 +165,13 @@ class PlayBoard:
 			# Draw the complete board
 			for c in range(self.columns):
 				for r in range(self.rows):
-					piece_id = self.get_piece(c, r)
+					piece_id = self.get_piece((c, r))
 					if piece_id != 0:									
 						pos = (c*self.piece_w, r*self.piece_h)
 						rectangle(my_surface, pos+(self.piece_w, self.piece_h), 
 							THECOLORS["white"] )
+						if (c, r) in self._play_path[:-1]:
+							continue
 						text = self.font.render(str(piece_id), True, THECOLORS["white"])	
 						xpos = (c*self.piece_w) + (self.piece_w/2) - (text.get_width()/2)
 						ypos = (r*self.piece_h) + (self.piece_h/2) - (text.get_height()/2)
@@ -176,10 +180,10 @@ class PlayBoard:
 			# Turn those on play path gray
 			for i in range(len(self._play_path)-1):
 				c, r = self._play_path[i]
-				piece_id = self.get_piece(c, r)
+				piece_id = self.get_piece(self._play_path[i])
 				pos = (c*self.piece_w+1, r*self.piece_h+1)
-				box(my_surface, pos+(self.piece_w-1, self.piece_h-1), 
-					PLAYED_BACKGROUND_COLOR )				
+				#box(my_surface, pos+(self.piece_w-1, self.piece_h-1), 
+				#	PLAYED_BACKGROUND_COLOR )				
 				text = self.font.render(str(piece_id), True, PLAYED_COLOR)	
 				xpos = (c*self.piece_w) + (self.piece_w/2) - (text.get_width()/2)
 				ypos = (r*self.piece_h) + (self.piece_h/2) - (text.get_height()/2)				
@@ -187,11 +191,11 @@ class PlayBoard:
 
 			# Paint goals
 			for c, r in self.goals:
-				piece_id = self.get_piece(c, r)
+				piece_id = self.get_piece((c, r))
 				pos = (c*self.piece_w+1, r*self.piece_h+1)
-				box(my_surface, pos+(self.piece_w-1, self.piece_h-1), 
-					THECOLORS["black"] )				
-				text = self.font.render(str(piece_id), True, THECOLORS["green"])	
+				#box(my_surface, pos+(self.piece_w-1, self.piece_h-1), 
+				#	THECOLORS["green"] )				
+				text = self.font.render(str(piece_id), True, THECOLORS["yellow"])	
 				xpos = (c*self.piece_w) + (self.piece_w/2) - (text.get_width()/2)
 				ypos = (r*self.piece_h) + (self.piece_h/2) - (text.get_height()/2)				
 				my_surface.blit(text, (xpos, ypos))				
@@ -202,6 +206,3 @@ class PlayBoard:
 		
 		
 		screen.blit(tmp_surface, (self.h_border, self.header_height))
-			
-		
-
