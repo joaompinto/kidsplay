@@ -54,7 +54,8 @@ class Game:
 	ROWS = 12
 
 	# Top header for score
-	header_height = 60
+	header_height = 60	
+		
 	
 	def __init__(self):
 		random.seed()
@@ -92,7 +93,7 @@ class Game:
 		self.playboard = PlayBoard(screen, 
 				self.COLUMNS, self.ROWS, self.header_height)
 		self._set_background()
-		self.is_game_over = False		
+		self.is_game_over = False						
 
 	def start(self, debug=False):		
 		self.score = 0
@@ -102,7 +103,7 @@ class Game:
 		
 	def _start_level(self, debug=False):
 		self.playboard.start(self.level)
-		self.is_level_complete = False
+		self.is_level_complete = False		
 			
 	def _config_file(self, fname):
 		""" Return full filename for a config file based on the platform """
@@ -226,6 +227,8 @@ class Game:
 		if touch_pos == self.playboard.get_last_pos() and \
 			len(self.playboard._play_path) > 1:
 				self.playboard.remove_last()
+				if touch_pos in self.playboard.touched_goals:
+					self.playboard.touched_goals.remove(touch_pos)
 				return			
 		current_x, current_y = self.playboard.get_last_pos()
 		
@@ -240,7 +243,9 @@ class Game:
 		self.score += 1
 		self.playboard.place_at((touch_x, touch_y))
 		if touch_pos in self.playboard.goals:
-			self.is_level_complete = True		
+			self.playboard.touched_goals.append(touch_pos)
+			if len(self.playboard.touched_goals) == len(self.playboard.goals):
+				self.is_level_complete = True		
 		
 	def _draw(self):
 		screen = self.screen
@@ -250,7 +255,10 @@ class Game:
 			self.first_draw = time.clock()
 
 		self.playboard.draw(screen)		
-
+	
+		# Header
+		screen.blit(self.background, (0,0), (0, 0, self.width, self.header_height))
+				
 		# Score text
 		text = self.score_font.render(' Score: %d ' % self.score, True, 
 			THECOLORS["white"])		
