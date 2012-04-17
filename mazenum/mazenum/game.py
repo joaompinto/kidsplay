@@ -166,7 +166,8 @@ class Game:
 					if self.start_button.is_pressed(event.pos):
 						self.run()
 						self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), 100)
-				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+				if event.type == QUIT or (event.type == KEYDOWN and 
+						event.key in [K_ESCAPE, pygame.K_b]:
 					return False							
 			screen.blit(self.background, (0, 0))
 			screen.blit(self.start_button.image, self.start_button.rect)
