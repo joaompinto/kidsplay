@@ -47,7 +47,7 @@ except ImportError:
 TARGET_FPS = 30
 
 DEBUG = False
-resources.DATA_DIR = "/usr/share/mazenum"
+resources.DATA_DIR = "/usr/share/games/mazenum"
     
 class Game:
 	COLUMNS = 8
@@ -167,7 +167,7 @@ class Game:
 						self.run()
 						self.start_button.setCords((screen.get_width()/2) - (self.start_button.rect.width/2), 100)
 				if event.type == QUIT or (event.type == KEYDOWN and 
-						event.key in [K_ESCAPE, pygame.K_b]:
+						event.key in [K_ESCAPE, pygame.K_b]):
 					return False							
 			screen.blit(self.background, (0, 0))
 			screen.blit(self.start_button.image, self.start_button.rect)
