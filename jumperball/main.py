@@ -8,6 +8,14 @@ from math import sqrt
 from pygame.color import THECOLORS
 from random import randint, choice
 
+try:
+	import android	
+	import android.mixer as mixer
+	ANDROID = True
+except ImportError:
+	ANDROID = None	
+	import pygame.mixer as mixer
+		
 class Body:
 	def __init__(self, x, y, radius, color):
 		self.x, self.y, self.radius = x, y, radius
@@ -18,6 +26,7 @@ class Body:
 	def accelerate(self, delta):
 		self.x += self.ax * delta * delta
 		self.y += self.ay * delta * delta
+		self.y += self.ay * delta * delta
 		self.ax = self.ay = 0
 		
 	def inertia(self):
@@ -26,7 +35,7 @@ class Body:
 		self.x, self.y = x, y
 		
 class Simulation:
-	possible_colors = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'purple', 'orange']
+	possible_colors = ['blue', 'red', 'green', 'yellow', 'magenta']
 	def __init__(self, width, height):
 		self.bodies = []
 		self.width = width
@@ -34,12 +43,17 @@ class Simulation:
 		self.damping = 0.98
 		
 		# Place non colliding balls as random positions
-		while len(self.bodies) < 50:
+		b1 = Body(100, 100, 30, THECOLORS['red'])
+		#self.bodies = [b1]
+		#return 
+		while len(self.bodies) < 2:
 			x = randint(25, width - 25)
 			y = randint(25, height - 25)
-			r = randint(5, height/15)
+			#r = randint(5, height/15)
+			r = 10
 			c = THECOLORS[choice(self.possible_colors)]
 			body = Body(x, y, r, c)
+			body.friction = randint(0, 1)
 			collides = False
 			for other in self.bodies:
 				x, y = other.x - body.x, other.y - body.y
@@ -59,6 +73,10 @@ class Simulation:
 				length = sqrt(slength)
 				target = body1.radius + body2.radius;
 				if length < target: # Colision detected				
+				
+					#if body1.color == body2.color:
+					#	body1.radius /= 2
+					#	body2.radius /= 2
 					# Current velocity is needed to calculate impulse
 					v1x = body1.x - body1.px
 					v1y = body1.y - body1.py
@@ -124,10 +142,25 @@ class Simulation:
 		elif y + radius > height:
 			body.y = height-radius
 
-	def gravity(self):
+	def gravity(self):		
 		for body in self.bodies:
-			body.ay += 0.5
+			body.ay += self.y_gravity
+			body.ax += self.x_gravity
 
+	def friction(self):		
+		friction = 0.05
+		for body in self.bodies:						
+			if body.friction == 0:
+				continue
+			x = (body.px - body.x)
+			y = (body.py - body.y)
+			slength = float(sqrt(x*x+y*y))		
+			length = sqrt(slength)
+			if x <> 0:				
+				body.ax = (x/length)*friction
+			if y <> 0:
+				body.ay = (y/length)*friction		
+		
 	def inertia(self):
 		for body in self.bodies:
 			body.inertia()
@@ -135,17 +168,27 @@ class Simulation:
 	def accelerate(self, delta):
 		for body in self.bodies:
 			body.accelerate(delta)
+			
+	def destroy_small_balls(self):
+		to_delete = []
+		for body in self.bodies:
+			if body.radius < 10:
+				to_delete.append(body)
+		for body in to_delete:
+			self.bodies.remove(body)
 
 	def step(self):
 		steps = 2
 		delta = 1.0/steps
 		for i in range(steps):
-			self.gravity();
-			self.accelerate(delta);
-			self.collide(False);
-			self.border_collide();
-			self.inertia();
-			self.collide(True);
+			#self.friction()
+			self.gravity()
+			self.accelerate(delta)
+			self.collide(False)
+			self.border_collide()
+			self.inertia()	
+			self.collide(True)
+			self.destroy_small_balls()
 			self.border_collide_preserve_impulse();
 
 
@@ -155,15 +198,23 @@ class GraphichalEngine:
 		self.loopFlag = True
 				
 		#Display
-		os.environ['SDL_VIDEO_CENTERED'] = '1'
+		if not ANDROID:
+			os.environ['SDL_VIDEO_CENTERED'] = '1'		
+		
+		pygame.init()	
+		if ANDROID:
+			android.init()
+			android.accelerometer_enable(True)
+			android.map_key(android.KEYCODE_BACK, pygame.K_ESCAPE)
+			
 		width, height = 800, 480
 		self.displaySize = width, height
 		self.display = pygame.display.set_mode(self.displaySize)
-		self.fps = 30		
+		self.fps = 60		
 
 		#Peripherals
 		#self.keyboard = Keyboard()
-		#self.mouse = Mouse()
+		self.mouse = Mouse()
 				
 		# Simulation
 		self.simulator = Simulation(width, height)
@@ -178,7 +229,7 @@ class GraphichalEngine:
 				self.loopFlag = False
 		
 		#self.keyboard.update(self.events)
-		#self.mouse.update(self.events)        
+		self.mouse.update(self.events, self.simulator)        
 		
 	def afterUpdate(self):
 		pygame.display.flip()
@@ -192,6 +243,13 @@ class GraphichalEngine:
 			self.afterUpdate()
 		
 	def update(self):
+		if ANDROID:
+			x,y,z = android.accelerometer_reading()
+		else:
+			x, y, z = 0, 0, 0
+		print x, y, z
+		self.simulator.y_gravity = x/10
+		self.simulator.x_gravity = y/10
 		self.simulator.step()
 			
 	def draw(self):
@@ -200,5 +258,48 @@ class GraphichalEngine:
 			pygame.draw.circle(self.display, body.color, (int(body.x), int(body.y)), body.radius)
 			
 
+class Mouse:
+	"""One more self-explicative singleton. Update each frame!
+	"""
+	def __init__(self):
+		self.x = 0
+		self.y = 0
+		self.xPrev = 0
+		self.yPrev = 0
+		
+		self.pressed = [0,0,0]
+		self.pressedPrev = [0,0,0]
+		self.pressedTime = 0
+		
+		self.wheel = 0
+	
+	def update(self, events, simulator):
+		#Remember the now old state
+		self.xPrev, self.yPrev = self.x, self.y
+		self.pressedPrev = self.pressed
+		self.wheel = 0
+		
+		#Update state
+		self.x, self.y = pygame.mouse.get_pos()
+		self.pressed = pygame.mouse.get_pressed()
+		
+		#Remember for how many frames the mouse has been pressed
+		if self.pressed[0] or self.pressed[2]:
+			self.pressedTime += 1
+		else:
+			self.pressedTime = 0
+		
+		#Handle mouse wheel
+		for event in events:
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				for body in simulator.bodies:
+					x = body.x - self.x
+					y = body.y - self.y
+					length = sqrt(x*x+y*y)
+					if length <= body.radius:
+						body.px = self.x
+						body.py = self.y
+					
+                    
 g = GraphichalEngine()
 g.startLoop()
