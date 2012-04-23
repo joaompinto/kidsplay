@@ -105,3 +105,8 @@ class Mouse:
 		for event in events:
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				caller.on_MOUSEBUTTONDOWN(self)
+			if event.type == pygame.MOUSEMOTION	and hasattr(caller,"on_MOUSEMOTION"):
+				caller.on_MOUSEMOTION(self)
+			if event.type == pygame.MOUSEBUTTONUP and hasattr(caller,"on_MOUSEBUTTONUP"):
+				caller.on_MOUSEBUTTONUP(self)
+
