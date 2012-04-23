@@ -4,7 +4,7 @@ from math import sqrt
 from pygame.color import THECOLORS
 from random import randint, choice
 
-from simulation.dynamics import Simulation
+from simulation.dynamics import Simulation, Point
 
 try:
 	import android	
@@ -35,7 +35,7 @@ class GraphichalEngine:
 		self.fps = 60		
 
 		#Peripherals
-		#self.keyboard = Keyboard()
+		self.keyboard = Keyboard()
 		self.mouse = Mouse()
 				
 		# Simulation
@@ -50,7 +50,7 @@ class GraphichalEngine:
 			if event.type == pygame.QUIT:
 				self.loopFlag = False
 		
-		#self.keyboard.update(self.events)
+		self.keyboard.update(self.events, self)
 		self.mouse.update(self.events, self)        
 		
 	def afterUpdate(self):
@@ -78,12 +78,14 @@ class Mouse:
 		self.y = 0
 		self.xPrev = 0
 		self.yPrev = 0
+		self.point = Point(None, None)
 		
 		self.pressed = [0,0,0]
 		self.pressedPrev = [0,0,0]
 		self.pressedTime = 0
 		
 		self.wheel = 0
+		self.last_pressed = [0,0,0]
 	
 	def update(self, events, caller):
 		#Remember the now old state
@@ -93,6 +95,7 @@ class Mouse:
 		
 		#Update state
 		self.x, self.y = pygame.mouse.get_pos()
+		self.point.x, self.point.y = self.x, self.y
 		self.pressed = pygame.mouse.get_pressed()
 		
 		#Remember for how many frames the mouse has been pressed
@@ -104,9 +107,23 @@ class Mouse:
 		#Handle mouse wheel
 		for event in events:
 			if event.type == pygame.MOUSEBUTTONDOWN:
+				self.last_pressed = self.pressed
 				caller.on_MOUSEBUTTONDOWN(self)
 			if event.type == pygame.MOUSEMOTION	and hasattr(caller,"on_MOUSEMOTION"):
 				caller.on_MOUSEMOTION(self)
 			if event.type == pygame.MOUSEBUTTONUP and hasattr(caller,"on_MOUSEBUTTONUP"):
 				caller.on_MOUSEBUTTONUP(self)
 
+class Keyboard():
+	def update(self, events, caller):
+		for event in events:
+			if event.type == pygame.KEYDOWN:
+				try:
+					in_key_map = {pygame.K_SPACE : "space"}
+					key_symbol = in_key_map.get(event.key, chr(event.key)) 
+					key_str = "on_KEY_"+key_symbol			
+				except ValueError:
+					key_str = ""
+				if hasattr(caller, key_str):
+					method = getattr(caller, key_str)
+					method()

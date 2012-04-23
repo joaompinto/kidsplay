@@ -25,9 +25,9 @@ class Point:
 		return nearest_point
 		
 class CircularBody:
-	def __init__(self, x, y, radius):
-		self.x, self.y, self.radius = x, y, radius
-		self.px, self.py = x, y
+	def __init__(self, P, radius):
+		self.x, self.y, self.radius = P.x, P.y, radius
+		self.px, self.py = P.x, P.y
 		self.ax = self.ay = 0
 
 	def center(self):
