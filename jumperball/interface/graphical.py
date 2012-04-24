@@ -4,7 +4,8 @@ from math import sqrt
 from pygame.color import THECOLORS
 from random import randint, choice
 
-from simulation.dynamics import Simulation, Point
+from simulation.geometry import Point
+from simulation.world import World
 
 try:
 	import android	
@@ -38,8 +39,8 @@ class GraphichalEngine:
 		self.keyboard = Keyboard()
 		self.mouse = Mouse()
 				
-		# Simulation
-		self.simulator = Simulation(width, height)
+		# world
+		self.world = World(width, height)
 
 		#Other objects
 		self.clock = pygame.time.Clock()		
@@ -78,7 +79,7 @@ class Mouse:
 		self.y = 0
 		self.xPrev = 0
 		self.yPrev = 0
-		self.point = Point(None, None)
+		self.point = Point(0, 0)
 		
 		self.pressed = [0,0,0]
 		self.pressedPrev = [0,0,0]
