@@ -1,0 +1,40 @@
+#:kivy 1.0
+<ToolBox>:
+	size_hint: None, 1	
+	height: root.height
+	BoxLayout:		
+		orientation: 'vertical'
+        padding: 20    
+        Button:	
+			text: 'Static'
+			size_hint: 1, None
+			height: 50
+			on_press: root.on_press_static(self)
+			background_normal: 'atlas://data/images/defaulttheme/button_pressed'
+		Widget:
+			color: 0, 0 ,0
+			height: 10
+			size_hint: 1, None
+        Button:			
+			name: 'circle'
+			on_press: root.on_press_tool(self)
+			size_hint: 1, None
+			height: 50
+			Image:
+				source: 'data/circle.png'
+				pos: self.parent.center_x-20, self.parent.center_y-20
+				size: 40, 40			
+		Button:
+			name: 'polygon'
+			on_press: root.on_press_tool(self)
+			size_hint: 1, None
+			height: 50
+			Image:
+				source: 'data/polygon.png'
+				pos: self.parent.center_x-20, self.parent.center_y-20
+				size: 40, 40		
+<SimulatorCanvas>: 
+	size_hint: 1, 1
+    canvas:	    
+	on_touch_down: self.on_touch_down 
+	
