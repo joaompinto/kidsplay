@@ -25,22 +25,29 @@ from vertielab.toolbox import ToolBox
 
 
 class VertieLabApp(App):
-	
+
 	toolbox = ObjectProperty(None)
 	simulator_canvas = ObjectProperty(None)
-	
+
 	def on_tool_select(self, obj, value):
 		self.simulator_canvas.tool_name = value
-		
+
 	def on_static_toggle(self, obj, value):
-		self.simulator_canvas.static_tool = value	
-		
+		self.simulator_canvas.static_tool = value
+
+	def on_toolbox_action(self, obj, value):
+		print value
+		if value == "clear_all":
+			self.simulator_canvas.clear_all()
+
 	def build(self):
 		root = BoxLayout(orientation='horizontal')
+		#root.padding = 0
 		self.toolbox = ToolBox()
-		root.add_widget(self.toolbox)	
+		root.add_widget(self.toolbox)
 		self.simulator_canvas = SimulatorCanvas()
-		root.add_widget(self.simulator_canvas)	
+		root.add_widget(self.simulator_canvas)
 		self.toolbox.bind(on_tool_select=self.on_tool_select)
 		self.toolbox.bind(on_static_toggle=self.on_static_toggle)
+		self.toolbox.bind(on_action=self.on_toolbox_action)
 		return root

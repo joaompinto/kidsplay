@@ -1,0 +1,20 @@
+# Install Kivy
+sudo apt-get install python-setuptools python-pygame python-opengl \
+  python-gst0.10 python-enchant gstreamer0.10-plugins-good cython python-dev \
+  build-essential libgl1-mesa-dev libgles2-mesa-dev
+  
+cd /tmp
+wget http://pypi.python.org/packages/source/K/Kivy/Kivy-1.2.0.tar.gz
+# Apply multitouch emulation disable patch
+wget http://dl.dropbox.com/u/1141378/Kivi/disable_multitouch.diff
+tar xvf Kivy-1.2.0.tar.gz
+cd Kivy-1.2.0
+cat ../disable_multitouch.diff | patch -p1
+sudo python setup.py install --prefix=/usr --install-layout=deb
+
+# Install cymunk
+cd /tmp
+git clone https://github.com/tito/cymunk
+cd cymunk
+sudo python setup.py install --prefix=/usr --install-layout=deb
+

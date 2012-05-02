@@ -21,33 +21,41 @@ from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 
 class ToolBox(Widget):
-	""" The tollbox widget provides a container for a group of buttons
-	which can be used to select a tool . """
-	static_selected = True
-	selected_tool = ObjectProperty(None)	
+    """ The tollbox widget provides a container for a group of buttons
+    which can be used to select a tool . """
+    static_selected = True
+    selected_tool = ObjectProperty(None)
 
-	def __init__(self, **kwargs):
-		super(ToolBox, self).__init__(**kwargs)
-		self.register_event_type('on_tool_select')	
-		self.register_event_type('on_static_toggle')
-	
-	def on_press_static(self, widget):		
-		self.static_selected ^= True
-		if self.static_selected:
-			widget.background_normal = 'atlas://data/images/defaulttheme/button_pressed'
-		else:
-			widget.background_normal = 'atlas://data/images/defaulttheme/button'
-		self.static_selected = self.static_selected
-		self.dispatch('on_static_toggle', self.static_selected)
+    def __init__(self, **kwargs):
+        super(ToolBox, self).__init__(**kwargs)
+        self.register_event_type('on_tool_select')
+        self.register_event_type('on_static_toggle')
+        self.register_event_type('on_action')
 
-	def on_press_tool(self, widget):	
-		if self.selected_tool:
-			self.selected_tool.background_normal = 'atlas://data/images/defaulttheme/button'
-		widget.background_normal = 'atlas://data/images/defaulttheme/button_pressed'
-		self.dispatch('on_tool_select', widget.name)
-	
-	def on_tool_select(self, tool_name):
-		pass
-		
-	def on_static_toggle(self, tool_name):
-		pass		
+    def on_press_static(self, widget):
+        self.static_selected ^= True
+        if self.static_selected:
+            widget.background_normal = 'atlas://data/images/defaulttheme/button_pressed'
+        else:
+            widget.background_normal = 'atlas://data/images/defaulttheme/button'
+        self.static_selected = self.static_selected
+        self.dispatch('on_static_toggle', self.static_selected)
+
+    def on_press_tool(self, widget):
+        if self.selected_tool:
+            self.selected_tool.background_normal = 'atlas://data/images/defaulttheme/button'
+        widget.background_normal = 'atlas://data/images/defaulttheme/button_pressed'
+        self.selected_tool = widget
+        self.dispatch('on_tool_select', widget.name)
+
+    def on_tool_select(self, tool_name):
+        pass
+
+    def on_static_toggle(self, tool_name):
+        pass
+
+    def on_action(self, action_name):
+        pass
+
+    def do_action(self, action_name):
+        self.dispatch('on_action', action_name)

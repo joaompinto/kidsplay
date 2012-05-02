@@ -1,21 +1,19 @@
 #:kivy 1.0
 <ToolBox>:
-	size_hint: None, 1	
+	size_hint: None, 1
+	width: 60
 	height: root.height
-	BoxLayout:		
+	BoxLayout:
+		size_hint: None, 1
+		size: root.size
+		#width: root.width-10
 		orientation: 'vertical'
-        padding: 20    
-        Button:	
-			text: 'Static'
-			size_hint: 1, None
-			height: 50
-			on_press: root.on_press_static(self)
-			background_normal: 'atlas://data/images/defaulttheme/button_pressed'
+		spacing: 10
 		Widget:
 			color: 0, 0 ,0
 			height: 10
 			size_hint: 1, None
-        Button:			
+        Button:
 			name: 'circle'
 			on_press: root.on_press_tool(self)
 			size_hint: 1, None
@@ -23,7 +21,7 @@
 			Image:
 				source: 'data/circle.png'
 				pos: self.parent.center_x-20, self.parent.center_y-20
-				size: 40, 40			
+				size: 40, 40
 		Button:
 			name: 'polygon'
 			on_press: root.on_press_tool(self)
@@ -32,9 +30,49 @@
 			Image:
 				source: 'data/polygon.png'
 				pos: self.parent.center_x-20, self.parent.center_y-20
-				size: 40, 40		
-<SimulatorCanvas>: 
+				size: 40, 40
+		Button:
+			name: 'remove'
+			on_press: root.on_press_tool(self)
+			size_hint: 1, None
+			height: 50
+			Image:
+				source: 'data/remove.png'
+				pos: self.parent.center_x-20, self.parent.center_y-20
+				size: 40, 40
+
+		Button:
+			name: 'clear_all'
+			text: "Clear"
+			on_press: root.do_action(self.name)
+			size_hint: 1, None
+			height: 50
+
+#        Button:
+#			text: 'Static'
+#			size_hint: 1, None
+#			height: 50
+#			on_press: root.on_press_static(self)
+#			background_normal: 'atlas://data/images/defaulttheme/button_pressed'
+#        Button:
+#			text: 'Gravity'
+#			size_hint: 1, None
+#			height: 50
+#			on_press: root.on_press_gravity(self)
+
+<SimulatorCanvas>:
+	size: self.size
+	pos: self.pos
+	canvas.after:
+		Line:
+            points: [self.x, self.top, self.right, self.top]
+        Line:
+            points: [self.right, self.top, self.right, self.y]
+        Line:
+            points: [self.x, self.y, self.right, self.y]
+        Line:
+            points: [self.x, self.y, self.x, self.top]
+	padding: 0
 	size_hint: 1, 1
-    canvas:	    
 	on_touch_down: self.on_touch_down 
-	
+

@@ -32,6 +32,7 @@ from vertielab.app import VertieLabApp
 
 if __name__ in ('__android__', '__main__'):
 	os.environ['SDL_VIDEO_CENTERED'] = '1'
+	Config.set('input', 'mouse', 'mouse,disable_multitouch')
 	Config.set('graphics', 'width', '800')
 	Config.set('graphics', 'height', '600')	
 	
